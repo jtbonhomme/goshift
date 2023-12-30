@@ -4,7 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
+)
+
+const (
+	OneDay time.Duration = time.Hour * 24
 )
 
 // Input for the pager duty scheduling problem. We have
@@ -38,6 +43,10 @@ type AssignedUser struct {
 	Name string `json:"name,omitempty"`
 	ID   string `json:"id,omitempty"`
 	Type string `json:"type,omitempty"`
+}
+
+func (a AssignedUser) String() string {
+	return a.Name
 }
 
 func main() {
@@ -130,11 +139,13 @@ func main() {
 	}
 
 	for i := 0; i < len(primary); i++ {
-		fmt.Printf("- %s: %v | %v\n", primary[i].Start, primary[i].User, secondary[i].User)
+		weekday := primary[i].Start.Weekday().String()
+		margin := strings.Repeat(" ", 10-len(weekday))
+		fmt.Printf("- %s %s %s: %s | %s\n", weekday, margin, primary[i].Start, primary[i].User, secondary[i].User)
 	}
 
 	for i := 0; i < len(input.Users); i++ {
-		fmt.Printf("* %s: %d | %d\n", input.Users[i].Name, pstats[i], sstats[i])
+		fmt.Printf("* user %s: %d | %d\n", input.Users[i].Name, pstats[i], sstats[i])
 	}
 }
 
@@ -167,10 +178,10 @@ func solver(input Input) ([]Override, []Override, []int, []int, error) {
 	ui := NewIterator(input.Users)
 
 	// build shifts
-	for d := input.ScheduleStart; d.Before(input.ScheduleEnd); d = d.Add(24 * time.Hour) {
+	for d := input.ScheduleStart; d.Before(input.ScheduleEnd); d = d.Add(OneDay) {
 		primary := Override{
 			Start: d,
-			End:   d.Add(24 * time.Hour),
+			End:   d.Add(OneDay),
 		}
 
 		for i := 0; i < len(input.Users); i++ {
@@ -188,7 +199,7 @@ func solver(input Input) ([]Override, []Override, []int, []int, error) {
 
 		secondary := Override{
 			Start: d,
-			End:   d.Add(24 * time.Hour),
+			End:   d.Add(OneDay),
 		}
 
 		for i := 0; i < len(input.Users); i++ {
