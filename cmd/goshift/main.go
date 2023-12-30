@@ -179,6 +179,8 @@ func solver(input Input) ([]Override, []Override, []int, []int, error) {
 
 	// build shifts
 	for d := input.ScheduleStart; d.Before(input.ScheduleEnd); d = d.Add(OneDay) {
+		weekday := d.Weekday().String()
+
 		primary := Override{
 			Start: d,
 			End:   d.Add(OneDay),
@@ -187,6 +189,10 @@ func solver(input Input) ([]Override, []Override, []int, []int, error) {
 		for i := 0; i < len(input.Users); i++ {
 			user, n := ui.Next()
 			if !slices.Contains(user.Unavailable, d) {
+				if weekday == time.Saturday.String() &&
+					slices.Contains(user.Unavailable, d.Add(OneDay)) {
+					continue
+				}
 				primary.User = AssignedUser{
 					Name: user.Name,
 					ID:   user.ID,
@@ -205,6 +211,10 @@ func solver(input Input) ([]Override, []Override, []int, []int, error) {
 		for i := 0; i < len(input.Users); i++ {
 			user, n := ui.Next()
 			if !slices.Contains(user.Unavailable, d) {
+				if weekday == time.Saturday.String() &&
+					slices.Contains(user.Unavailable, d.Add(OneDay)) {
+					continue
+				}
 				secondary.User = AssignedUser{
 					Name: user.Name,
 					ID:   user.ID,
@@ -230,6 +240,21 @@ func solver(input Input) ([]Override, []Override, []int, []int, error) {
 
 		overridesPrimary = append(overridesPrimary, primary)
 		overridesSecondary = append(overridesSecondary, secondary)
+		if weekday == time.Saturday.String() && d.Before(input.ScheduleEnd) {
+			overridesPrimary = append(overridesPrimary, Override{
+				Start:    primary.Start.Add(OneDay),
+				End:      primary.End.Add(OneDay),
+				User:     primary.User,
+				TimeZone: primary.TimeZone,
+			})
+			overridesSecondary = append(overridesSecondary, Override{
+				Start:    secondary.Start.Add(OneDay),
+				End:      secondary.End.Add(OneDay),
+				User:     secondary.User,
+				TimeZone: secondary.TimeZone,
+			})
+			d = d.Add(OneDay)
+		}
 	}
 
 	return overridesPrimary, overridesSecondary, primaryStats, secondaryStats, err
