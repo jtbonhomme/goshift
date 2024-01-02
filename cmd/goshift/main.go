@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -11,6 +13,16 @@ import (
 const (
 	OneDay time.Duration = time.Hour * 24
 )
+
+var location *time.Location
+
+func init() {
+	var err error
+	location, err = time.LoadLocation("Europe/Paris")
+	if err != nil {
+		panic(err)
+	}
+}
 
 // Input for the pager duty scheduling problem. We have
 // pager duty users that need to be assigned to days between the schedule start
@@ -32,10 +44,9 @@ type User struct {
 // Override provides the start, end, user, and timezone of the override to work
 // with the PagerDuty API.
 type Override struct {
-	Start    time.Time    `json:"start"`
-	End      time.Time    `json:"end"`
-	User     AssignedUser `json:"user"`
-	TimeZone string       `json:"time_zone"`
+	Start time.Time    `json:"start"`
+	End   time.Time    `json:"end"`
+	User  AssignedUser `json:"user"`
 }
 
 // An AssignedUser has a name, id, and type for PagerDuty override.
@@ -49,89 +60,78 @@ func (a AssignedUser) String() string {
 	return a.Name
 }
 
+func parseFramadateCSV(data [][]string) Input {
+	var dates []time.Time
+	var input = Input{
+		ScheduleStart: time.Now().Add(10*365 + 24*time.Hour),
+		ScheduleEnd:   time.Now().Add(-10*365 + 24*time.Hour),
+		Users:         []User{},
+	}
+
+	for i, line := range data {
+		if i == 0 {
+			fmt.Println(line)
+			dates = make([]time.Time, len(line))
+			for j, field := range line {
+				if field == "" {
+					continue
+				}
+				d, err := time.Parse("02/01/2006", field)
+				if err != nil {
+					panic(err)
+				}
+				// TZ
+
+				t := time.Date(d.Year(), d.Month(), d.Day(), 9, 0, 0, 0, location)
+				if input.ScheduleStart.After(d) {
+					input.ScheduleStart = t
+				}
+				if input.ScheduleEnd.Before(d) {
+					input.ScheduleEnd = t
+				}
+				dates[j] = t
+			}
+			continue
+		}
+		// empty line after header
+		if i == 1 {
+			continue
+		}
+		fmt.Println(line)
+		user := User{
+			Unavailable: []time.Time{},
+		}
+		for j, field := range line {
+			if j == 0 {
+				user.Name = field
+			} else if field == "Non" {
+				user.Unavailable = append(user.Unavailable, dates[j])
+			}
+		}
+		input.Users = append(input.Users, user)
+	}
+
+	return input
+}
+
 func main() {
+	var err error
+
 	fmt.Println("goshift")
-	inputJSON := `{
-		"schedule_start": "2024-01-01T09:00:00+01:00",
-		"schedule_end": "2024-02-01T09:00:00+01:00",
-		"users": [
-		  {
-			"name": "a",
-			"unavailable": [
-				"2024-01-01T09:00:00+01:00"
-			]
-		  },
-		  {
-			"name": "t",
-			"unavailable": [
-			  "2024-01-14T09:00:00+01:00",
-			  "2024-01-15T09:00:00+01:00",
-			  "2024-01-16T09:00:00+01:00",
-			  "2024-01-17T09:00:00+01:00",
-			  "2024-01-18T09:00:00+01:00",
-			  "2024-01-19T09:00:00+01:00",
-			  "2024-01-20T09:00:00+01:00",
-			  "2024-01-21T09:00:00+01:00",
-			  "2024-01-22T09:00:00+01:00",
-			  "2024-01-23T09:00:00+01:00",
-			  "2024-01-24T09:00:00+01:00",
-			  "2024-01-25T09:00:00+01:00",
-			  "2024-01-26T09:00:00+01:00",
-			  "2024-01-27T09:00:00+01:00",
-			  "2024-01-28T09:00:00+01:00",
-			  "2024-01-29T09:00:00+01:00",
-			  "2024-01-30T09:00:00+01:00",
-			  "2024-01-31T09:00:00+01:00"
-			]
-		  },
-		  {
-			"name": "c",
-			"unavailable": [
-				"2024-01-01T09:00:00+01:00"
-			]
-		  },
-		  {
-			"name": "e",
-			"unavailable": [
-				"2024-01-19T09:00:00+01:00",
-				"2024-01-20T09:00:00+01:00",
-				"2024-01-21T09:00:00+01:00"
-			]
-		  },
-		  {
-			"name": "o",
-			"unavailable": [
-				"2024-01-01T09:00:00+01:00",
-				"2024-01-02T09:00:00+01:00",
-				"2024-01-03T09:00:00+01:00",
-				"2024-01-04T09:00:00+01:00",
-				"2024-01-05T09:00:00+01:00",
-				"2024-01-06T09:00:00+01:00",
-				"2024-01-07T09:00:00+01:00",
-				"2024-01-08T09:00:00+01:00",
-				"2024-01-09T09:00:00+01:00",
-				"2024-01-11T09:00:00+01:00"
-			]
-		  },
-		  {
-			"name": "y",
-			"unavailable": [
-				"2024-01-01T09:00:00+01:00",
-				"2024-01-06T09:00:00+01:00",
-				"2024-01-13T09:00:00+01:00",
-				"2024-01-20T09:00:00+01:00",
-				"2024-01-27T09:00:00+01:00"
-			]
-		  }
-		 ]
-	   }`
 
-	input := Input{}
-
-	err := json.Unmarshal([]byte(inputJSON), &input)
+	f, err := os.Open("/Users/jbonhomm/Downloads/January2024DTOnCall.csv")
 	if err != nil {
 		panic(err)
 	}
+	defer f.Close()
+
+	csvReader := csv.NewReader(f)
+	data, err := csvReader.ReadAll()
+	if err != nil {
+		panic(err)
+	}
+
+	input := parseFramadateCSV(data)
 
 	primary, secondary, pstats, sstats, err := solver(input)
 	if err != nil {
@@ -147,6 +147,24 @@ func main() {
 	for i := 0; i < len(input.Users); i++ {
 		fmt.Printf("* user %s: %d | %d\n", input.Users[i].Name, pstats[i], sstats[i])
 	}
+
+	p, err := json.MarshalIndent(primary, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Primary on-call shift")
+	fmt.Print(string(p))
+	fmt.Println("")
+
+	s, err := json.MarshalIndent(secondary, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Secondary on-call shift")
+	fmt.Print(string(s))
+	fmt.Println("")
 }
 
 type UserIterator struct {
@@ -242,16 +260,14 @@ func solver(input Input) ([]Override, []Override, []int, []int, error) {
 		overridesSecondary = append(overridesSecondary, secondary)
 		if weekday == time.Saturday.String() && d.Before(input.ScheduleEnd) {
 			overridesPrimary = append(overridesPrimary, Override{
-				Start:    primary.Start.Add(OneDay),
-				End:      primary.End.Add(OneDay),
-				User:     primary.User,
-				TimeZone: primary.TimeZone,
+				Start: primary.Start.Add(OneDay),
+				End:   primary.End.Add(OneDay),
+				User:  primary.User,
 			})
 			overridesSecondary = append(overridesSecondary, Override{
-				Start:    secondary.Start.Add(OneDay),
-				End:      secondary.End.Add(OneDay),
-				User:     secondary.User,
-				TimeZone: secondary.TimeZone,
+				Start: secondary.Start.Add(OneDay),
+				End:   secondary.End.Add(OneDay),
+				User:  secondary.User,
 			})
 			d = d.Add(OneDay)
 		}
