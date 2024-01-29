@@ -238,7 +238,7 @@ func avg(stats []int) int {
 	for _, s := range stats {
 		cumul += s
 	}
-	return int(cumul / l)
+	return int(cumul / (l - 6))
 }
 
 func solver(input Input, users Users) (Overrides, Overrides, []int, []int, error) {
@@ -268,7 +268,17 @@ func solver(input Input, users Users) (Overrides, Overrides, []int, []int, error
 		for i := 0; i < len(input.Users); i++ {
 			user, n := ui.Next()
 			if !slices.Contains(user.Unavailable, d) {
-				// user not available this day
+				// newbies
+				if user.Email == "valerio.figliuolo@contentsquare.com" ||
+					user.Email == "ahmed.khaled@contentsquare.com" ||
+					user.Email == "houssem.touansi@contentsquare.com" ||
+					user.Email == "kevin.albes@contentsquare.com" ||
+					user.Email == "yunbo.wang@contentsquare.com" ||
+					user.Email == "wael.tekaya@contentsquare.com" {
+					continue
+				}
+
+				// user not available on Sunday and current day is Saturday
 				if weekday == time.Saturday.String() &&
 					slices.Contains(user.Unavailable, d.Add(OneDay)) {
 					continue
@@ -300,6 +310,15 @@ func solver(input Input, users Users) (Overrides, Overrides, []int, []int, error
 		for i := 0; i < len(input.Users); i++ {
 			user, n := ui.Next()
 			if !slices.Contains(user.Unavailable, d) {
+				// newbies
+				if user.Email != "valerio.figliuolo@contentsquare.com" &&
+					user.Email != "ahmed.khaled@contentsquare.com" &&
+					user.Email != "houssem.touansi@contentsquare.com" &&
+					user.Email != "kevin.albes@contentsquare.com" &&
+					user.Email != "yunbo.wang@contentsquare.com" &&
+					user.Email != "wael.tekaya@contentsquare.com" {
+					continue
+				}
 				// user not available this day
 				if weekday == time.Saturday.String() &&
 					slices.Contains(user.Unavailable, d.Add(OneDay)) {
@@ -307,7 +326,7 @@ func solver(input Input, users Users) (Overrides, Overrides, []int, []int, error
 				}
 
 				// already too much shifts for this user
-				if secondaryStats[n] > secondaryAvgShifts {
+				if secondaryStats[n] > secondaryAvgShifts+2 {
 					continue
 				}
 
@@ -326,11 +345,47 @@ func solver(input Input, users Users) (Overrides, Overrides, []int, []int, error
 
 		// check shift
 		if primary.User.Name == "" {
-			return Overrides{}, Overrides{}, nil, nil, fmt.Errorf("empty user for primary on %s", primary.Start)
+			// try to pick very first name available
+			for i := 0; i < len(input.Users); i++ {
+				user, n := ui.Next()
+				if !slices.Contains(user.Unavailable, d) &&
+					(weekday != time.Saturday.String() ||
+						(weekday == time.Saturday.String() && !slices.Contains(user.Unavailable, d.Add(OneDay)))) {
+					u, err := retrieveUser(user, users)
+					if err != nil {
+						fmt.Printf("error: %s\n", err.Error())
+						continue
+					}
+					primary.User = u
+					primaryStats[n]++
+					break
+				}
+			}
+			if primary.User.Name == "" {
+				return Overrides{}, Overrides{}, nil, nil, fmt.Errorf("empty user for primary on %s", primary.Start)
+			}
 		}
 
 		if secondary.User.Name == "" {
-			return Overrides{}, Overrides{}, nil, nil, fmt.Errorf("empty user for secondary on %s", secondary.Start)
+			// try to pick very first name available
+			for i := 0; i < len(input.Users); i++ {
+				user, n := ui.Next()
+				if !slices.Contains(user.Unavailable, d) &&
+					(weekday != time.Saturday.String() ||
+						(weekday == time.Saturday.String() && !slices.Contains(user.Unavailable, d.Add(OneDay)))) {
+					u, err := retrieveUser(user, users)
+					if err != nil {
+						fmt.Printf("error: %s\n", err.Error())
+						continue
+					}
+					secondary.User = u
+					secondaryStats[n]++
+					break
+				}
+			}
+			if secondary.User.Name == "" {
+				return Overrides{}, Overrides{}, nil, nil, fmt.Errorf("empty user for secondary on %s", secondary.Start)
+			}
 		}
 
 		if primary.User == secondary.User {
