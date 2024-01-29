@@ -307,7 +307,7 @@ func solver(input Input, users Users) (Overrides, Overrides, []int, []int, error
 				}
 
 				// already too much shifts for this user
-				if secondaryStats[n] > secondaryAvgShifts+1 {
+				if secondaryStats[n] > secondaryAvgShifts {
 					continue
 				}
 
