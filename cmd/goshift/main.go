@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/fatih/color"
 )
 
 const (
@@ -193,9 +195,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println("Primary on-call shift")
-	//fmt.Print(string(p))
-	//fmt.Println("")
+	displayCalendar("Primary on-call shift", primary)
 
 	s, err := json.MarshalIndent(secondary, "", "  ")
 	if err != nil {
@@ -207,9 +207,134 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println("Secondary on-call shift")
-	//fmt.Print(string(s))
-	//fmt.Println("")
+	displayCalendar("Secondary on-call shift", secondary)
+}
+
+var months = [12]string{
+	"January",
+	"February",
+	"March",
+	"April",
+	"May",
+	"June",
+	"July",
+	"August",
+	"September",
+	"October",
+	"November",
+	"December",
+}
+
+var days = [7]string{
+	"Mon",
+	"Tue",
+	"Wed",
+	"Thu",
+	"Fri",
+	"Sat",
+	"Sun",
+}
+
+func displayCalendar(title string, schedule Overrides) {
+	start := schedule.Overrides[0].Start
+	month := start.Month()
+	year := start.Year()
+
+	fmt.Println(title)
+	//fmt.Println(override.Overrides)
+	printHeader(month, year)
+
+	day := 1
+	printFirstWeek(&day, start, schedule)
+	printOtherWeeks(day, start, schedule)
+
+	fmt.Println("")
+}
+
+const (
+	monthStringLen string = "   "
+	daySeparator   string = "         "
+)
+
+func printHeader(month time.Month, year int) {
+	c1 := color.New(color.FgHiBlue).Add(color.Bold)
+	c2 := color.New(color.FgHiCyan).Add(color.Bold)
+	c1.Printf("%s %d", months[month-1], year)
+	c1.Println("")
+	c2.Println(strings.Join(days[:], daySeparator))
+}
+
+func printFirstWeek(day *int, start time.Time, schedule Overrides) {
+	f := beginningOfMonth(start).Weekday()
+	found := false
+
+	for i, v := range days {
+		if f.String()[0:3] == v {
+			printDay(*day, i, start)
+			*day++
+			found = true
+			continue
+		} else {
+			if !found {
+				fmt.Print(daySeparator + monthStringLen)
+			}
+		}
+
+		if found {
+			printDay(*day, i, start)
+			*day++
+		}
+	}
+
+	fmt.Println("")
+}
+
+func printOtherWeeks(day int, start time.Time, schedule Overrides) {
+	e := endOfMonth(start)
+	idx := 0
+	for day <= e.Day() {
+		printDay(day, idx, start)
+		idx++
+
+		if idx >= len(days) {
+			fmt.Println("")
+			idx = 0
+		}
+
+		day++
+	}
+}
+
+func printDay(day int, idx int, start time.Time) {
+	workdayColor := color.New(color.FgWhite).Add(color.Bold)
+	holidayColor := color.New(color.FgHiCyan).Add(color.Bold)
+	currentDayColor := color.New(color.FgHiRed).Add(color.Bold)
+
+	if day > 9 {
+		if day == start.Day() {
+			currentDayColor.Printf(" %d%s", day, daySeparator)
+		} else if idx == 5 || idx == 6 {
+			holidayColor.Printf(" %d%s", day, daySeparator)
+		} else {
+			workdayColor.Printf(" %d%s", day, daySeparator)
+		}
+	} else {
+		if day == start.Day() {
+			currentDayColor.Printf("  %d%s", day, daySeparator)
+		} else if idx == 5 || idx == 6 {
+			holidayColor.Printf("  %d%s", day, daySeparator)
+		} else {
+			workdayColor.Printf("  %d%s", day, daySeparator)
+		}
+	}
+}
+
+func beginningOfMonth(date time.Time) time.Time {
+	return date.AddDate(0, 0, -date.Day()+1)
+}
+
+func endOfMonth(date time.Time) time.Time {
+	return date.AddDate(0, 1, -date.Day())
 }
 
 type UserIterator struct {
@@ -265,19 +390,10 @@ func solver(input Input, users Users) (Overrides, Overrides, []int, []int, error
 			End:   d.Add(OneDay),
 		}
 
+		// primary schedule override
 		for i := 0; i < len(input.Users); i++ {
 			user, n := ui.Next()
 			if !slices.Contains(user.Unavailable, d) {
-				// newbies only primary at beginning
-				if user.Email != "valerio.figliuolo@contentsquare.com" &&
-					user.Email != "ahmed.khaled@contentsquare.com" &&
-					user.Email != "houssem.touansi@contentsquare.com" &&
-					user.Email != "kevin.albes@contentsquare.com" &&
-					user.Email != "yunbo.wang@contentsquare.com" &&
-					user.Email != "wael.tekaya@contentsquare.com" {
-					continue
-				}
-
 				// user not available on Sunday and current day is Saturday
 				if weekday == time.Saturday.String() &&
 					slices.Contains(user.Unavailable, d.Add(OneDay)) {
@@ -307,10 +423,11 @@ func solver(input Input, users Users) (Overrides, Overrides, []int, []int, error
 			End:   d.Add(OneDay),
 		}
 
+		// secondary schedule override
 		for i := 0; i < len(input.Users); i++ {
 			user, n := ui.Next()
 			if !slices.Contains(user.Unavailable, d) {
-				// experienced DE as secondary at beginning
+				// no newbie as secondary at beginning
 				if user.Email == "valerio.figliuolo@contentsquare.com" ||
 					user.Email == "ahmed.khaled@contentsquare.com" ||
 					user.Email == "houssem.touansi@contentsquare.com" ||
