@@ -9,6 +9,15 @@ import (
 	"github.com/jtbonhomme/goshift/internal/utils"
 )
 
+var newbies []string = []string{
+	"valerio.figliuolo@contentsquare.com",
+	"ahmed.khaled@contentsquare.com",
+	"houssem.touansi@contentsquare.com",
+	"kevin.albes@contentsquare.com",
+	"yunbo.wang@contentsquare.com",
+	"wael.tekaya@contentsquare.com",
+}
+
 func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pagerduty.Overrides, []int, []int, error) {
 	var err error
 	var overridesPrimary = pagerduty.Overrides{
@@ -28,6 +37,10 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 	for d := input.ScheduleStart; d.Before(input.ScheduleEnd.Add(utils.OneDay)); d = d.Add(utils.OneDay) {
 		weekday := d.Weekday().String()
 
+		fmt.Printf("\n-- Day %s %s\n", weekday, d.String())
+		fmt.Printf("\t-- primary avg is %d\n", primaryAvgShifts)
+		fmt.Printf("\t-- secondary avg is %d\n", secondaryAvgShifts)
+
 		primary := pagerduty.Override{
 			Start: d,
 			End:   d.Add(utils.OneDay),
@@ -37,15 +50,19 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 		// primary schedule override
 		for i := 0; i < len(input.Users); i++ {
 			user, n := ui.Next()
+			fmt.Printf("\t-- considering %s (%d) for primary\n", user.Email, n)
+
 			if !slices.Contains(user.Unavailable, d) {
 				// user not available on Sunday and current day is Saturday
 				if weekday == time.Saturday.String() &&
 					slices.Contains(user.Unavailable, d.Add(utils.OneDay)) {
+					fmt.Printf("\t\t-- %s is not available on sunday\n", user.Email)
 					continue
 				}
 
 				// already too much shifts for this user
 				if primaryStats[n] > primaryAvgShifts {
+					fmt.Printf("\t\t-- %s shifts number (%d) are too high compared to average (%d)\n", user.Email, primaryStats[n], primaryAvgShifts+1)
 					continue
 				}
 
@@ -58,6 +75,7 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 				primary.User = u
 				primaryStats[n]++
 				nPrim = n
+				fmt.Printf("\t\t-- %s is selected for primary !\n", user.Email)
 				break
 			}
 		}
@@ -70,6 +88,8 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 		// secondary schedule override
 		for i := 0; i < len(input.Users); i++ {
 			user, n := ui.Next()
+			fmt.Printf("\t-- considering %s (%d) for secondary\n", user.Email, n)
+
 			if !slices.Contains(user.Unavailable, d) {
 				// no newbie as secondary at beginning
 				if user.Email == "valerio.figliuolo@contentsquare.com" ||
@@ -78,17 +98,20 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 					user.Email == "kevin.albes@contentsquare.com" ||
 					user.Email == "yunbo.wang@contentsquare.com" ||
 					user.Email == "wael.tekaya@contentsquare.com" {
+					fmt.Printf("\t\t-- %s is a newbie\n", user.Email)
 					continue
 				}
 
 				// user not available this day
 				if weekday == time.Saturday.String() &&
 					slices.Contains(user.Unavailable, d.Add(utils.OneDay)) {
+					fmt.Printf("\t\t-- %s is not available on sunday\n", user.Email)
 					continue
 				}
 
 				// already too much shifts for this user
 				if secondaryStats[n] > secondaryAvgShifts {
+					fmt.Printf("\t\t-- %s shifts number (%d) are too high compared to average (%d)\n", user.Email, primaryStats[n], secondaryAvgShifts)
 					continue
 				}
 
@@ -101,6 +124,7 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 				secondary.User = u
 				secondaryStats[n]++
 				nSec = n
+				fmt.Printf("\t\t-- %s is selected for secondary !\n", user.Email)
 				break
 			}
 		}
@@ -216,7 +240,7 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 			d = d.Add(utils.OneDay)
 		}
 
-		primaryAvgShifts, secondaryAvgShifts = utils.Average(primaryStats), utils.Average(secondaryStats)
+		primaryAvgShifts, secondaryAvgShifts = utils.Average(primaryStats, len(input.Users)), utils.Average(secondaryStats, len(input.Users)-len(newbies))
 	}
 
 	return overridesPrimary, overridesSecondary, primaryStats, secondaryStats, err

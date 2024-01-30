@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/jtbonhomme/goshift/internal/pagerduty"
 	"github.com/jtbonhomme/goshift/internal/schedule"
@@ -46,6 +48,8 @@ func main() {
 	}
 
 	input := utils.ParseFramadateCSV(data)
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(input.Users), func(i, j int) { input.Users[i], input.Users[j] = input.Users[j], input.Users[i] })
 
 	primary, secondary, pstats, sstats, err := solver.Run(input, users)
 	if err != nil {

@@ -2,6 +2,7 @@ package pagerduty
 
 import (
 	"fmt"
+	"slices"
 	"time"
 )
 
@@ -39,9 +40,29 @@ func NewIterator(users []User) *UserIterator {
 	return &ui
 }
 
+func (ui *UserIterator) NextWithExclude(exclude []string) (User, int) {
+	if exclude == nil {
+		return ui.Next()
+	}
+
+	var found bool
+	var k int
+
+	for found {
+		k = ui.iterator % len(ui.Users)
+		ui.iterator++
+		if !slices.Contains(exclude, ui.Users[k].Email) {
+			break
+		}
+	}
+
+	return ui.Users[k], k
+}
+
 func (ui *UserIterator) Next() (User, int) {
 	k := ui.iterator % len(ui.Users)
 	ui.iterator++
+
 	return ui.Users[k], k
 }
 
