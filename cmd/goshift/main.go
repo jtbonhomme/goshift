@@ -268,13 +268,13 @@ func solver(input Input, users Users) (Overrides, Overrides, []int, []int, error
 		for i := 0; i < len(input.Users); i++ {
 			user, n := ui.Next()
 			if !slices.Contains(user.Unavailable, d) {
-				// newbies
-				if user.Email == "valerio.figliuolo@contentsquare.com" ||
-					user.Email == "ahmed.khaled@contentsquare.com" ||
-					user.Email == "houssem.touansi@contentsquare.com" ||
-					user.Email == "kevin.albes@contentsquare.com" ||
-					user.Email == "yunbo.wang@contentsquare.com" ||
-					user.Email == "wael.tekaya@contentsquare.com" {
+				// newbies only primary at beginning
+				if user.Email != "valerio.figliuolo@contentsquare.com" &&
+					user.Email != "ahmed.khaled@contentsquare.com" &&
+					user.Email != "houssem.touansi@contentsquare.com" &&
+					user.Email != "kevin.albes@contentsquare.com" &&
+					user.Email != "yunbo.wang@contentsquare.com" &&
+					user.Email != "wael.tekaya@contentsquare.com" {
 					continue
 				}
 
@@ -310,15 +310,16 @@ func solver(input Input, users Users) (Overrides, Overrides, []int, []int, error
 		for i := 0; i < len(input.Users); i++ {
 			user, n := ui.Next()
 			if !slices.Contains(user.Unavailable, d) {
-				// newbies
-				if user.Email != "valerio.figliuolo@contentsquare.com" &&
-					user.Email != "ahmed.khaled@contentsquare.com" &&
-					user.Email != "houssem.touansi@contentsquare.com" &&
-					user.Email != "kevin.albes@contentsquare.com" &&
-					user.Email != "yunbo.wang@contentsquare.com" &&
-					user.Email != "wael.tekaya@contentsquare.com" {
+				// experienced DE as secondary at beginning
+				if user.Email == "valerio.figliuolo@contentsquare.com" ||
+					user.Email == "ahmed.khaled@contentsquare.com" ||
+					user.Email == "houssem.touansi@contentsquare.com" ||
+					user.Email == "kevin.albes@contentsquare.com" ||
+					user.Email == "yunbo.wang@contentsquare.com" ||
+					user.Email == "wael.tekaya@contentsquare.com" {
 					continue
 				}
+
 				// user not available this day
 				if weekday == time.Saturday.String() &&
 					slices.Contains(user.Unavailable, d.Add(OneDay)) {
@@ -326,7 +327,7 @@ func solver(input Input, users Users) (Overrides, Overrides, []int, []int, error
 				}
 
 				// already too much shifts for this user
-				if secondaryStats[n] > secondaryAvgShifts+2 {
+				if secondaryStats[n] > secondaryAvgShifts {
 					continue
 				}
 
