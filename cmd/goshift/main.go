@@ -85,7 +85,6 @@ func parseFramadateCSV(data [][]string) Input {
 
 	for i, line := range data {
 		if i == 0 {
-			//fmt.Println(line)
 			dates = make([]time.Time, len(line))
 			for j, field := range line {
 				if field == "" {
@@ -117,7 +116,6 @@ func parseFramadateCSV(data [][]string) Input {
 			continue
 		}
 
-		//fmt.Println(line)
 		user := User{
 			Unavailable: []time.Time{},
 		}
@@ -154,7 +152,6 @@ func main() {
 	// we unmarshal our byteArray which contains our
 	// jsonFile's content into 'users' which we defined above
 	json.Unmarshal(usersValue, &users)
-	//fmt.Println(users)
 
 	f, err := os.Open("/Users/jean-thierry.bonhomme/Downloads/DTOnCallFebruary2024.csv")
 	if err != nil {
@@ -241,7 +238,7 @@ func displayCalendar(title string, schedule Overrides) {
 	year := start.Year()
 
 	fmt.Println(title)
-	//fmt.Println(override.Overrides)
+	fmt.Println("")
 	printHeader(month, year)
 
 	day := 1
@@ -249,11 +246,13 @@ func displayCalendar(title string, schedule Overrides) {
 	printOtherWeeks(day, start, schedule)
 
 	fmt.Println("")
+	fmt.Println("")
 }
 
 const (
 	monthStringLen string = "   "
-	daySeparator   string = "         "
+	daySeparator   string = " "
+	nameLen        int    = 10
 )
 
 func printHeader(month time.Month, year int) {
@@ -261,7 +260,7 @@ func printHeader(month time.Month, year int) {
 	c2 := color.New(color.FgHiCyan).Add(color.Bold)
 	c1.Printf("%s %d", months[month-1], year)
 	c1.Println("")
-	c2.Println(strings.Join(days[:], daySeparator))
+	c2.Println(strings.Join(days[:], daySeparator+strings.Repeat(" ", nameLen)))
 }
 
 func printFirstWeek(day *int, start time.Time, schedule Overrides) {
@@ -271,17 +270,19 @@ func printFirstWeek(day *int, start time.Time, schedule Overrides) {
 	for i, v := range days {
 		if f.String()[0:3] == v {
 			printDay(*day, i, start)
+			printName(*day, schedule)
 			*day++
 			found = true
 			continue
 		} else {
 			if !found {
-				fmt.Print(daySeparator + monthStringLen)
+				fmt.Print(daySeparator + monthStringLen + strings.Repeat(" ", nameLen))
 			}
 		}
 
 		if found {
 			printDay(*day, i, start)
+			printName(*day, schedule)
 			*day++
 		}
 	}
@@ -294,6 +295,7 @@ func printOtherWeeks(day int, start time.Time, schedule Overrides) {
 	idx := 0
 	for day <= e.Day() {
 		printDay(day, idx, start)
+		printName(day, schedule)
 		idx++
 
 		if idx >= len(days) {
@@ -303,6 +305,17 @@ func printOtherWeeks(day int, start time.Time, schedule Overrides) {
 
 		day++
 	}
+}
+
+func printName(idx int, schedule Overrides) {
+	firstName := strings.Split(schedule.Overrides[idx-1].User.Name, " ")[0]
+	if len(firstName) > nameLen {
+		firstName = firstName[:nameLen]
+	} else {
+		firstName += strings.Repeat(" ", nameLen-len(firstName))
+	}
+
+	fmt.Print(firstName)
 }
 
 func printDay(day int, idx int, start time.Time) {
@@ -390,6 +403,7 @@ func solver(input Input, users Users) (Overrides, Overrides, []int, []int, error
 			End:   d.Add(OneDay),
 		}
 
+		var nPrim, nSec int
 		// primary schedule override
 		for i := 0; i < len(input.Users); i++ {
 			user, n := ui.Next()
@@ -413,7 +427,7 @@ func solver(input Input, users Users) (Overrides, Overrides, []int, []int, error
 
 				primary.User = u
 				primaryStats[n]++
-
+				nPrim = n
 				break
 			}
 		}
@@ -456,7 +470,7 @@ func solver(input Input, users Users) (Overrides, Overrides, []int, []int, error
 
 				secondary.User = u
 				secondaryStats[n]++
-
+				nSec = n
 				break
 			}
 		}
@@ -476,6 +490,7 @@ func solver(input Input, users Users) (Overrides, Overrides, []int, []int, error
 					}
 					primary.User = u
 					primaryStats[n]++
+					nPrim = n
 					break
 				}
 			}
@@ -491,6 +506,16 @@ func solver(input Input, users Users) (Overrides, Overrides, []int, []int, error
 				if !slices.Contains(user.Unavailable, d) &&
 					(weekday != time.Saturday.String() ||
 						(weekday == time.Saturday.String() && !slices.Contains(user.Unavailable, d.Add(OneDay)))) {
+					// no newbie as secondary at beginning
+					if user.Email == "valerio.figliuolo@contentsquare.com" ||
+						user.Email == "ahmed.khaled@contentsquare.com" ||
+						user.Email == "houssem.touansi@contentsquare.com" ||
+						user.Email == "kevin.albes@contentsquare.com" ||
+						user.Email == "yunbo.wang@contentsquare.com" ||
+						user.Email == "wael.tekaya@contentsquare.com" {
+						continue
+					}
+
 					u, err := retrieveUser(user, users)
 					if err != nil {
 						fmt.Printf("error: %s\n", err.Error())
@@ -498,6 +523,7 @@ func solver(input Input, users Users) (Overrides, Overrides, []int, []int, error
 					}
 					secondary.User = u
 					secondaryStats[n]++
+					nSec = n
 					break
 				}
 			}
@@ -507,7 +533,37 @@ func solver(input Input, users Users) (Overrides, Overrides, []int, []int, error
 		}
 
 		if primary.User == secondary.User {
-			return Overrides{}, Overrides{}, nil, nil, fmt.Errorf("same user for primary and secondary on %s", primary.Start)
+			// try to pick very first other name available
+			for i := 0; i < len(input.Users); i++ {
+				user, n := ui.Next()
+				if !slices.Contains(user.Unavailable, d) &&
+					(weekday != time.Saturday.String() ||
+						(weekday == time.Saturday.String() && !slices.Contains(user.Unavailable, d.Add(OneDay)))) {
+					// no newbie as secondary at beginning
+					if user.Email == "valerio.figliuolo@contentsquare.com" ||
+						user.Email == "ahmed.khaled@contentsquare.com" ||
+						user.Email == "houssem.touansi@contentsquare.com" ||
+						user.Email == "kevin.albes@contentsquare.com" ||
+						user.Email == "yunbo.wang@contentsquare.com" ||
+						user.Email == "wael.tekaya@contentsquare.com" {
+						continue
+					}
+
+					u, err := retrieveUser(user, users)
+					if err != nil {
+						fmt.Printf("error: %s\n", err.Error())
+						continue
+					}
+					secondary.User = u
+					secondaryStats[n]++
+					nSec = n
+					break
+				}
+			}
+
+			if primary.User == secondary.User {
+				return Overrides{}, Overrides{}, nil, nil, fmt.Errorf("same user for primary and secondary on %s", primary.Start)
+			}
 		}
 
 		overridesPrimary.Overrides = append(overridesPrimary.Overrides, primary)
@@ -525,11 +581,12 @@ func solver(input Input, users Users) (Overrides, Overrides, []int, []int, error
 				End:   secondary.End.Add(OneDay),
 				User:  secondary.User,
 			})
+			primaryStats[nPrim]++
+			secondaryStats[nSec]++
 			d = d.Add(OneDay)
 		}
 
 		primaryAvgShifts, secondaryAvgShifts = avg(primaryStats), avg(secondaryStats)
-		//fmt.Printf("primaryAvgShifts %d\tsecondaryAvgShifts %d\n", primaryAvgShifts, secondaryAvgShifts)
 	}
 
 	return overridesPrimary, overridesSecondary, primaryStats, secondaryStats, err
