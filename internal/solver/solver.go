@@ -84,13 +84,7 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 
 			if !slices.Contains(user.Unavailable, d) {
 				// no newbie as secondary at beginning
-				if user.Email == "valerio.figliuolo@contentsquare.com" ||
-					user.Email == "ahmed.khaled@contentsquare.com" ||
-					user.Email == "houssem.touansi@contentsquare.com" ||
-					user.Email == "kevin.albes@contentsquare.com" ||
-					user.Email == "yunbo.wang@contentsquare.com" ||
-					user.Email == "wael.tekaya@contentsquare.com" {
-					fmt.Printf("\t\t-- %s is a newbie\n", user.Email)
+				if slices.Contains(newbies, user.Email) {
 					continue
 				}
 
@@ -150,12 +144,7 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 					(weekday != time.Saturday.String() ||
 						(weekday == time.Saturday.String() && !slices.Contains(user.Unavailable, d.Add(utils.OneDay)))) {
 					// no newbie as secondary at beginning
-					if user.Email == "valerio.figliuolo@contentsquare.com" ||
-						user.Email == "ahmed.khaled@contentsquare.com" ||
-						user.Email == "houssem.touansi@contentsquare.com" ||
-						user.Email == "kevin.albes@contentsquare.com" ||
-						user.Email == "yunbo.wang@contentsquare.com" ||
-						user.Email == "wael.tekaya@contentsquare.com" {
+					if slices.Contains(newbies, user.Email) {
 						continue
 					}
 
@@ -183,12 +172,7 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 					(weekday != time.Saturday.String() ||
 						(weekday == time.Saturday.String() && !slices.Contains(user.Unavailable, d.Add(utils.OneDay)))) {
 					// no newbie as secondary at beginning
-					if user.Email == "valerio.figliuolo@contentsquare.com" ||
-						user.Email == "ahmed.khaled@contentsquare.com" ||
-						user.Email == "houssem.touansi@contentsquare.com" ||
-						user.Email == "kevin.albes@contentsquare.com" ||
-						user.Email == "yunbo.wang@contentsquare.com" ||
-						user.Email == "wael.tekaya@contentsquare.com" {
+					if slices.Contains(newbies, user.Email) {
 						continue
 					}
 
