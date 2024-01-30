@@ -1,4 +1,4 @@
-module goshift
+module github.com/jtbonhomme/goshift
 
 go 1.21.3
 
