@@ -64,7 +64,8 @@ func main() {
 		rand.Shuffle(len(input.Users), func(i, j int) { input.Users[i], input.Users[j] = input.Users[j], input.Users[i] })
 	}
 
-	primary, secondary, pstats, sstats, err := solver.Run(input, users)
+	sv := solver.New(input, users)
+	primary, secondary, pstats, sstats, wstats, err := sv.Run()
 	if err != nil {
 		panic(err)
 	}
@@ -76,7 +77,7 @@ func main() {
 	}
 
 	for i := 0; i < len(input.Users); i++ {
-		fmt.Printf("* user %s: %d | %d\n", input.Users[i].Email, pstats[i], sstats[i])
+		fmt.Printf("* user %s: %d | %d | %d\n", input.Users[i].Email, pstats[i], sstats[i], wstats[i])
 	}
 
 	p, err := json.MarshalIndent(primary, "", "  ")
