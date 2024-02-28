@@ -26,7 +26,6 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 	var overridesSecondary = pagerduty.Overrides{
 		Overrides: []pagerduty.Override{},
 	}
-	var primaryAvgShifts, secondaryAvgShifts int
 
 	primaryStats := make([]int, len(input.Users))
 	secondaryStats := make([]int, len(input.Users))
@@ -46,16 +45,20 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 		// primary schedule override
 		for i := 0; i < len(input.Users); i++ {
 			user, n := ui.Next()
+			fmt.Printf("\t🅰️ [%s] considering %s (%d) with %d shifts for primary (avgShifts: %d - maxShifts: %d)", d.String(), user.Email, n, primaryStats[n], utils.Average(primaryStats, len(input.Users)), utils.Max(primaryStats))
 
 			if !slices.Contains(user.Unavailable, d) {
 				// user not available on Sunday and current day is Saturday
 				if weekday == time.Saturday.String() &&
 					slices.Contains(user.Unavailable, d.Add(utils.OneDay)) {
+					fmt.Println(" not available on Sunday --> NEXT")
 					continue
 				}
 
 				// already too much shifts for this user
-				if primaryStats[n] > primaryAvgShifts {
+				//if primaryStats[n] > utils.Average(primaryStats, len(input.Users)) {
+				if primaryStats[n] > utils.Max(primaryStats) || primaryStats[n] > utils.MinWithoutZero(primaryStats)+1 || primaryStats[n] > utils.Average(primaryStats, len(input.Users))+1 {
+					fmt.Println(" stats too high --> NEXT")
 					continue
 				}
 
@@ -68,8 +71,10 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 				primary.User = u
 				primaryStats[n]++
 				nPrim = n
+				fmt.Println(" --> SELECTED")
 				break
 			}
+			fmt.Println(" not available --> NEXT")
 		}
 
 		secondary := pagerduty.Override{
@@ -80,22 +85,25 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 		// secondary schedule override
 		for i := 0; i < len(input.Users); i++ {
 			user, n := ui.Next()
-			fmt.Printf("\t-- considering %s (%d) for secondary\n", user.Email, n)
+			fmt.Printf("\t🅱️ [%s] considering %s (%d) with %d shifts for secondary (avgShifts: %d - maxShifts: %d)", d.String(), user.Email, n, primaryStats[n], utils.Average(secondaryStats, len(input.Users)), utils.Max(secondaryStats))
 
 			if !slices.Contains(user.Unavailable, d) {
 				// no newbie as secondary at beginning
 				if slices.Contains(newbies, user.Email) {
+					fmt.Println(" is a newbie --> NEXT")
 					continue
 				}
 
 				// user not available this day
 				if weekday == time.Saturday.String() &&
 					slices.Contains(user.Unavailable, d.Add(utils.OneDay)) {
+					fmt.Println(" not available on Sunday --> NEXT")
 					continue
 				}
 
 				// already too much shifts for this user
-				if secondaryStats[n] > secondaryAvgShifts {
+				if secondaryStats[n] > utils.MinWithoutZero(secondaryStats)+1 {
+					fmt.Println(" stats too high --> NEXT")
 					continue
 				}
 
@@ -108,12 +116,15 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 				secondary.User = u
 				secondaryStats[n]++
 				nSec = n
+				fmt.Printf(" --> SELECTED\n\n")
 				break
 			}
+			fmt.Println(" not available --> NEXT")
 		}
 
 		// check shift
 		if primary.User.Name == "" {
+			fmt.Printf("\t⚠️ could not find any primary, need to reselect another user: ")
 			// try to pick very first name available
 			for i := 0; i < len(input.Users); i++ {
 				user, n := ui.Next()
@@ -128,6 +139,7 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 					primary.User = u
 					primaryStats[n]++
 					nPrim = n
+					fmt.Printf("%s\n", u.Name)
 					break
 				}
 			}
@@ -212,8 +224,6 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 			secondaryStats[nSec]++
 			d = d.Add(utils.OneDay)
 		}
-
-		primaryAvgShifts, secondaryAvgShifts = utils.Average(primaryStats, len(input.Users)), utils.Average(secondaryStats, len(input.Users)-len(newbies))
 	}
 
 	return overridesPrimary, overridesSecondary, primaryStats, secondaryStats, err
