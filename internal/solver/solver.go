@@ -28,6 +28,7 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 	}
 
 	primaryStats := make([]int, len(input.Users))
+	weekendStats := make([]int, len(input.Users))
 	secondaryStats := make([]int, len(input.Users))
 
 	ui := pagerduty.NewIterator(input.Users)
@@ -65,6 +66,11 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 				u, err := pagerduty.RetrieveUser(user, users)
 				if err != nil {
 					fmt.Printf("error: %s\n", err.Error())
+					continue
+				}
+
+				if weekday == time.Saturday.String() && weekendStats[n] > utils.Average(weekendStats, len(input.Users)) {
+					fmt.Println(" too much week-ends --> NEXT")
 					continue
 				}
 
@@ -110,6 +116,11 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 				u, err := pagerduty.RetrieveUser(user, users)
 				if err != nil {
 					fmt.Printf("error: %s\n", err.Error())
+					continue
+				}
+
+				if weekday == time.Saturday.String() && weekendStats[n] > utils.Average(weekendStats, len(input.Users)) {
+					fmt.Println(" too much week-ends --> NEXT")
 					continue
 				}
 
@@ -222,6 +233,7 @@ func Run(input pagerduty.Input, users pagerduty.Users) (pagerduty.Overrides, pag
 			})
 			primaryStats[nPrim]++
 			secondaryStats[nSec]++
+			weekendStats[nSec]++
 			d = d.Add(utils.OneDay)
 		}
 	}
