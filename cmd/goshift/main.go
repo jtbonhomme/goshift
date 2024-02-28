@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/csv"
 	"encoding/json"
+	"errors"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -20,6 +22,13 @@ func main() {
 	var err error
 
 	fmt.Println("goshift")
+	var csvPath string
+	flag.StringVar(&csvPath, "csv", "", "[mandatory] framadate csv file path")
+	flag.Parse()
+
+	if csvPath == "" {
+		panic(errors.New("framadate csv file is missing"))
+	}
 
 	usersJson, err := os.Open("/Users/jean-thierry.bonhomme/Documents/Contentsquare/pagerduty-users.json")
 	if err != nil {
@@ -35,7 +44,7 @@ func main() {
 	// jsonFile's content into 'users' which we defined above
 	json.Unmarshal(usersValue, &users)
 
-	f, err := os.Open("/Users/jean-thierry.bonhomme/Downloads/DTOnCallFebruary2024.csv")
+	f, err := os.Open(csvPath)
 	if err != nil {
 		panic(err)
 	}
