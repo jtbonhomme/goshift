@@ -24,12 +24,14 @@ type Solver struct {
 	primaryStats   []int
 	weekendStats   []int
 	secondaryStats []int
+	ui             *pagerduty.UserIterator
 }
 
 func New(input pagerduty.Input, users pagerduty.Users) *Solver {
 	primaryStats := make([]int, len(input.Users))
 	weekendStats := make([]int, len(input.Users))
 	secondaryStats := make([]int, len(input.Users))
+	ui := pagerduty.NewIterator(input.Users)
 
 	return &Solver{
 		input:          input,
@@ -37,6 +39,7 @@ func New(input pagerduty.Input, users pagerduty.Users) *Solver {
 		primaryStats:   primaryStats,
 		weekendStats:   weekendStats,
 		secondaryStats: secondaryStats,
+		ui:             ui,
 	}
 }
 
@@ -49,114 +52,23 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, []int, []int, 
 		Overrides: []pagerduty.Override{},
 	}
 
-	ui := pagerduty.NewIterator(s.input.Users)
+	var lastPrimaryUser, lastSecondaryUser pagerduty.AssignedUser
 
 	// build shifts
 	for d := s.input.ScheduleStart; d.Before(s.input.ScheduleEnd.Add(utils.OneDay)); d = d.Add(utils.OneDay) {
 		weekday := d.Weekday().String()
 
-		primary := pagerduty.Override{
-			Start: d,
-			End:   d.Add(utils.OneDay),
-		}
-
-		var nPrim, nSec int
-		// primary schedule override
-		for i := 0; i < len(s.input.Users); i++ {
-			user, n := ui.Next()
-			fmt.Printf("\t🅰️ [%s] considering %s (%d) with %d shifts for primary (avgShifts: %d - maxShifts: %d)", d.String(), user.Email, n, s.primaryStats[n], utils.Average(s.primaryStats, len(s.input.Users)), utils.Max(s.primaryStats))
-
-			if !slices.Contains(user.Unavailable, d) {
-				// user not available on Sunday and current day is Saturday
-				if weekday == time.Saturday.String() &&
-					slices.Contains(user.Unavailable, d.Add(utils.OneDay)) {
-					fmt.Println(" not available on Sunday --> NEXT")
-					continue
-				}
-
-				// already too much shifts for this user
-				//if s.primaryStats[n] > utils.Average(primaryStats, len(s.input.Users)) {
-				if s.primaryStats[n] > utils.Max(s.primaryStats) || s.primaryStats[n] > utils.MinWithoutZero(s.primaryStats)+1 || s.primaryStats[n] > utils.Average(s.primaryStats, len(s.input.Users))+1 {
-					fmt.Println(" stats too high --> NEXT")
-					continue
-				}
-
-				u, err := pagerduty.RetrieveUser(user, s.users)
-				if err != nil {
-					fmt.Printf("error: %s\n", err.Error())
-					continue
-				}
-
-				if weekday == time.Saturday.String() && s.weekendStats[n] > utils.Average(s.weekendStats, len(s.input.Users)) {
-					fmt.Println(" too much week-ends --> NEXT")
-					continue
-				}
-
-				primary.User = u
-				s.primaryStats[n]++
-				nPrim = n
-				fmt.Println(" --> SELECTED")
-				break
-			}
-			fmt.Println(" not available --> NEXT")
-		}
-
-		secondary := pagerduty.Override{
-			Start: d,
-			End:   d.Add(utils.OneDay),
-		}
-
-		// secondary schedule override
-		for i := 0; i < len(s.input.Users); i++ {
-			user, n := ui.Next()
-			fmt.Printf("\t🅱️ [%s] considering %s (%d) with %d shifts for secondary (avgShifts: %d - maxShifts: %d)", d.String(), user.Email, n, s.primaryStats[n], utils.Average(s.secondaryStats, len(s.input.Users)), utils.Max(s.secondaryStats))
-
-			if !slices.Contains(user.Unavailable, d) {
-				// no newbie as secondary at beginning
-				if slices.Contains(newbies, user.Email) {
-					fmt.Println(" is a newbie --> NEXT")
-					continue
-				}
-
-				// user not available this day
-				if weekday == time.Saturday.String() &&
-					slices.Contains(user.Unavailable, d.Add(utils.OneDay)) {
-					fmt.Println(" not available on Sunday --> NEXT")
-					continue
-				}
-
-				// already too much shifts for this user
-				if s.secondaryStats[n] > utils.MinWithoutZero(s.secondaryStats)+1 {
-					fmt.Println(" stats too high --> NEXT")
-					continue
-				}
-
-				u, err := pagerduty.RetrieveUser(user, s.users)
-				if err != nil {
-					fmt.Printf("error: %s\n", err.Error())
-					continue
-				}
-
-				if weekday == time.Saturday.String() && s.weekendStats[n] > utils.Average(s.weekendStats, len(s.input.Users)) {
-					fmt.Println(" too much week-ends --> NEXT")
-					continue
-				}
-
-				secondary.User = u
-				s.secondaryStats[n]++
-				nSec = n
-				fmt.Printf(" --> SELECTED\n\n")
-				break
-			}
-			fmt.Println(" not available --> NEXT")
-		}
+		primary, nPrim := s.processPrimaryOverride(d, lastPrimaryUser)
+		lastPrimaryUser = primary.User
+		secondary, nSec := s.processSecondaryOverride(d, lastSecondaryUser)
+		lastSecondaryUser = secondary.User
 
 		// check shift
 		if primary.User.Name == "" {
 			fmt.Printf("\t⚠️ could not find any primary, need to reselect another user: ")
 			// try to pick very first name available
 			for i := 0; i < len(s.input.Users); i++ {
-				user, n := ui.Next()
+				user, n := s.ui.Next()
 				if !slices.Contains(user.Unavailable, d) &&
 					(weekday != time.Saturday.String() ||
 						(weekday == time.Saturday.String() && !slices.Contains(user.Unavailable, d.Add(utils.OneDay)))) {
@@ -180,7 +92,7 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, []int, []int, 
 		if secondary.User.Name == "" {
 			// try to pick very first name available
 			for i := 0; i < len(s.input.Users); i++ {
-				user, n := ui.Next()
+				user, n := s.ui.Next()
 				if !slices.Contains(user.Unavailable, d) &&
 					(weekday != time.Saturday.String() ||
 						(weekday == time.Saturday.String() && !slices.Contains(user.Unavailable, d.Add(utils.OneDay)))) {
@@ -208,7 +120,7 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, []int, []int, 
 		if primary.User == secondary.User {
 			// try to pick very first other name available
 			for i := 0; i < len(s.input.Users); i++ {
-				user, n := ui.Next()
+				user, n := s.ui.Next()
 				if !slices.Contains(user.Unavailable, d) &&
 					(weekday != time.Saturday.String() ||
 						(weekday == time.Saturday.String() && !slices.Contains(user.Unavailable, d.Add(utils.OneDay)))) {
@@ -251,6 +163,7 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, []int, []int, 
 			})
 			s.primaryStats[nPrim]++
 			s.secondaryStats[nSec]++
+			s.weekendStats[nPrim]++
 			s.weekendStats[nSec]++
 			d = d.Add(utils.OneDay)
 		}
