@@ -21,7 +21,6 @@ func (s *Solver) nextAvailableUser(d time.Time) (pagerduty.User, int, bool) {
 			// user not available on Sunday and current day is Saturday
 			if weekday == time.Saturday.String() &&
 				slices.Contains(user.Unavailable, d.Add(utils.OneDay)) {
-				fmt.Printf("\t\t %s not available on Sunday --> NEXT\n", user.Name)
 				continue
 			}
 			found = true

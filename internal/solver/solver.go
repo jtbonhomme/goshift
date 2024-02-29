@@ -58,6 +58,13 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, []int, []int, 
 	for d := s.input.ScheduleStart; d.Before(s.input.ScheduleEnd.Add(utils.OneDay)); d = d.Add(utils.OneDay) {
 		weekday := d.Weekday().String()
 
+		// filter out unavailable users
+		availableUsersOnly := filterUnavailableUsers(s.input.Users, d)
+
+		// rank and sort available users depending of their number of available days
+		sortedAvailableUsers := sortAvailableUsers(availableUsersOnly, d)
+		fmt.Println(sortedAvailableUsers)
+
 		primary, nPrim := s.processPrimaryOverride(d, lastPrimaryUser)
 		lastPrimaryUser = primary.User
 		secondary, nSec := s.processSecondaryOverride(d, lastSecondaryUser)
