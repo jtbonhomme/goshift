@@ -19,8 +19,9 @@ func (s *Solver) processOverride(label string, d time.Time, lastUsers []pagerdut
 
 	var excludedUsers = []string{}
 	var stats = s.PrimaryStats
+	// newbies are not allowed to do secondary
 	if isSecondary {
-		excludedUsers = s.secondaryExcludedUsers
+		excludedUsers = s.newbies
 		stats = s.SecondaryStats
 	}
 

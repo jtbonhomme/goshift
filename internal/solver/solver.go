@@ -9,15 +9,15 @@ import (
 )
 
 type Solver struct {
-	input                  pagerduty.Input
-	users                  pagerduty.Users
-	PrimaryStats           map[string]int
-	WeekendStats           map[string]int
-	SecondaryStats         map[string]int
-	secondaryExcludedUsers []string
+	input          pagerduty.Input
+	users          pagerduty.Users
+	PrimaryStats   map[string]int
+	WeekendStats   map[string]int
+	SecondaryStats map[string]int
+	newbies        []string
 }
 
-func New(input pagerduty.Input, users pagerduty.Users, secondaryExcludedUsers []string) *Solver {
+func New(input pagerduty.Input, users pagerduty.Users, newbies []string) *Solver {
 	// initialize maps
 	PrimaryStats := make(map[string]int, len(input.Users))
 	WeekendStats := make(map[string]int, len(input.Users))
@@ -30,12 +30,12 @@ func New(input pagerduty.Input, users pagerduty.Users, secondaryExcludedUsers []
 	}
 
 	return &Solver{
-		input:                  input,
-		users:                  users,
-		PrimaryStats:           PrimaryStats,
-		WeekendStats:           WeekendStats,
-		SecondaryStats:         SecondaryStats,
-		secondaryExcludedUsers: secondaryExcludedUsers,
+		input:          input,
+		users:          users,
+		PrimaryStats:   PrimaryStats,
+		WeekendStats:   WeekendStats,
+		SecondaryStats: SecondaryStats,
+		newbies:        newbies,
 	}
 }
 
@@ -52,15 +52,16 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, error) {
 
 	// rank and sort available users depending of their number of available days
 	sortedUsers := sortUsers(s.input.Users)
-	ui := pagerduty.NewIterator(sortedUsers)
 
 	// build shifts
 	for d := s.input.ScheduleStart; d.Before(s.input.ScheduleEnd.Add(utils.OneDay)); d = d.Add(utils.OneDay) {
 		weekday := d.Weekday().String()
+		ui := pagerduty.NewIterator(sortedUsers)
 
 		primary := s.processOverride("🅰️", d, lastUsers, ui, false, true)
 		lastUsers = append(lastUsers, primary.User)
 		secondary := s.processOverride("🅱️", d, lastUsers, ui, true, true)
+		fmt.Println("")
 
 		// check shift
 		if primary.User.Name == "" {

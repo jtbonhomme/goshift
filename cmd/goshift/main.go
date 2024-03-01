@@ -79,15 +79,7 @@ func main() {
 		panic(err)
 	}
 
-	for i := 0; i < len(primary.Overrides); i++ {
-		weekday := primary.Overrides[i].Start.Weekday().String()
-		margin := strings.Repeat(" ", 10-len(weekday))
-		fmt.Printf("- %s %s %s: %s | %s\n", weekday, margin, primary.Overrides[i].Start, primary.Overrides[i].User, secondary.Overrides[i].User)
-	}
-
-	for _, user := range input.Users {
-		fmt.Printf("* user %s: %d | %d | %d\n", user.Email, sv.PrimaryStats[user.Email], sv.SecondaryStats[user.Email], sv.WeekendStats[user.Email])
-	}
+	fmt.Println("")
 
 	p, err := json.MarshalIndent(primary, "", "  ")
 	if err != nil {
@@ -112,4 +104,16 @@ func main() {
 	}
 
 	schedule.DisplayCalendar("Secondary on-call shift", secondary)
+
+	fmt.Println("")
+
+	fmt.Printf("+%s+----+----+----+----+\n", strings.Repeat("-", 62))
+	fmt.Println("| Email                                                        |  P |  S |  T |  W |")
+	fmt.Printf("+%s+----+----+----+----+\n", strings.Repeat("-", 62))
+
+	for _, user := range input.Users {
+		fmt.Printf("| %s %s| %2d | %2d | %2d | %2d |\n", user.Email, strings.Repeat(" ", 60-len(user.Email)), sv.PrimaryStats[user.Email], sv.SecondaryStats[user.Email], sv.PrimaryStats[user.Email]+sv.SecondaryStats[user.Email], sv.WeekendStats[user.Email])
+	}
+	fmt.Printf("+%s+----+----+----+----+\n", strings.Repeat("-", 62))
+	fmt.Println("")
 }
