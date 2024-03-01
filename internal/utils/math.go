@@ -4,14 +4,14 @@ import (
 	"math"
 )
 
-func Average(stats map[string]int, total int) int {
+func Average(stats map[string]int) int {
 	var cumul int
 
 	for _, val := range stats {
 		cumul += val
 	}
 
-	return int(cumul / total)
+	return int(cumul / len(stats))
 }
 
 func Max(stats map[string]int) int {

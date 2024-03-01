@@ -107,13 +107,13 @@ func main() {
 
 	fmt.Println("")
 
-	fmt.Printf("+%s+----+----+----+----+\n", strings.Repeat("-", 62))
-	fmt.Println("| Email                                                        |  P |  S |  T |  W |")
-	fmt.Printf("+%s+----+----+----+----+\n", strings.Repeat("-", 62))
+	fmt.Printf("+%s+----+----+\n", strings.Repeat("-", 62))
+	fmt.Println("| Email                                                        |  S |  W |")
+	fmt.Printf("+%s+----+----+\n", strings.Repeat("-", 62))
 
 	for _, user := range input.Users {
-		fmt.Printf("| %s %s| %2d | %2d | %2d | %2d |\n", user.Email, strings.Repeat(" ", 60-len(user.Email)), sv.PrimaryStats[user.Email], sv.SecondaryStats[user.Email], sv.PrimaryStats[user.Email]+sv.SecondaryStats[user.Email], sv.WeekendStats[user.Email])
+		fmt.Printf("| %s %s| %2d | %2d |\n", user.Email, strings.Repeat(" ", 60-len(user.Email)), sv.Stats[user.Email], sv.WeekendStats[user.Email])
 	}
-	fmt.Printf("+%s+----+----+----+----+\n", strings.Repeat("-", 62))
+	fmt.Printf("+%s+----+----+\n", strings.Repeat("-", 62))
 	fmt.Println("")
 }

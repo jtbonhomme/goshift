@@ -18,26 +18,25 @@ func (s *Solver) processOverride(label string, d time.Time, lastUsers []pagerdut
 	weekday := d.Weekday().String()
 
 	var excludedUsers = []string{}
-	var stats = s.PrimaryStats
+
 	// newbies are not allowed to do secondary
 	if isSecondary {
 		excludedUsers = s.newbies
-		stats = s.SecondaryStats
 	}
 
 	// primary schedule override
 	for i := 0; i < ui.Len(excludedUsers); i++ {
 		user, _ := ui.NextWithExclude(excludedUsers)
-		fmt.Printf("\t%s [%s] considering %s: %d | %d shifts (avgShifts: %d - maxShifts: %d)", label, d.String(), user.Email, stats[user.Email], s.WeekendStats[user.Email], utils.Average(stats, ui.Len(excludedUsers)), utils.Max(stats))
+		fmt.Printf("\t%s [%s] considering %s: %d | %d shifts (avgShifts: %d - avgWeekends: %d)", label, d.String(), user.Email, s.Stats[user.Email], s.WeekendStats[user.Email], utils.Average(s.Stats), utils.Average(s.WeekendStats))
 
 		// already too much shifts for this user
-		//if stats[n] > utils.Max(stats) || stats[n] > utils.MinWithoutZero(stats)+1 || stats[n] > utils.Average(stats, ui.Len(excludedUsers))+1 {
-		if checkStats && stats[user.Email] > utils.Average(stats, ui.Len(excludedUsers))+1 {
+		//if s.Stats[n] > utils.Max(stats) || s.Stats[n] > utils.MinWithoutZero(stats)+1 || s.Stats[n] > utils.Average(stats)+1 {
+		if checkStats && s.Stats[user.Email] > utils.Average(s.Stats) {
 			fmt.Println(" stats too high --> NEXT")
 			continue
 		}
 
-		if checkStats && weekday == time.Saturday.String() && s.WeekendStats[user.Email] > utils.Average(s.WeekendStats, ui.Len(excludedUsers)) {
+		if checkStats && weekday == time.Saturday.String() && s.WeekendStats[user.Email] > utils.Average(s.WeekendStats) {
 			fmt.Println(" too much week-ends --> NEXT")
 			continue
 		}
@@ -54,13 +53,7 @@ func (s *Solver) processOverride(label string, d time.Time, lastUsers []pagerdut
 		}
 
 		override.User = u
-		if isSecondary {
-			n := s.SecondaryStats[user.Email]
-			s.SecondaryStats[user.Email] = n + 1
-		} else {
-			n := s.PrimaryStats[user.Email]
-			s.PrimaryStats[user.Email] = n + 1
-		}
+		s.Stats[user.Email]++
 		fmt.Println(" --> SELECTED")
 
 		break
