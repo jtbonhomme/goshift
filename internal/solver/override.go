@@ -25,8 +25,13 @@ func (s *Solver) processOverride(label string, d time.Time, lastUsers []pagerdut
 	}
 
 	// primary schedule override
-	for i := 0; i < ui.Len(excludedUsers); i++ {
-		user, _ := ui.NextWithExclude(excludedUsers)
+	for i := 0; i < len(s.input.Users); i++ {
+		user, _, ok := ui.NextWithExclude(excludedUsers)
+		if !ok {
+			fmt.Printf("\t%s [%s] error no result for next iterator with exclude\n", label, d.String())
+			return override
+		}
+
 		fmt.Printf("\t%s [%s] considering %s: %d | %d shifts (avgShifts: %d - avgWeekends: %d)", label, d.String(), user.Email, s.Stats[user.Email], s.WeekendStats[user.Email], utils.Average(s.Stats), utils.Average(s.WeekendStats))
 
 		// already too much shifts for this user

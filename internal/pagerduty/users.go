@@ -48,15 +48,17 @@ func (ui *UserIterator) Len(exclude []string) int {
 	return len(ui.Users) - len(exclude)
 }
 
-func (ui *UserIterator) NextWithExclude(exclude []string) (User, int) {
+func (ui *UserIterator) NextWithExclude(exclude []string) (User, int, bool) {
 	if exclude == nil {
-		return ui.Next()
+		u, n := ui.Next()
+		return u, n, true
 	}
 
 	var found bool
 	var k int
+	fmt.Println("start loop")
 
-	for !found {
+	for i := 0; i < len(ui.Users); i++ {
 		k = ui.iterator % len(ui.Users)
 		ui.iterator++
 		if !slices.Contains(exclude, ui.Users[k].Email) {
@@ -65,7 +67,7 @@ func (ui *UserIterator) NextWithExclude(exclude []string) (User, int) {
 		}
 	}
 
-	return ui.Users[k], k
+	return ui.Users[k], k, found
 }
 
 func (ui *UserIterator) Next() (User, int) {

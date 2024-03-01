@@ -46,12 +46,12 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, error) {
 
 	var lastUsers = []pagerduty.AssignedUser{}
 
-	// rank and sort available users depending of their number of available days
-	sortedUsers := sortUsersPerAvailability(s.input.Users)
-
 	// build shifts
 	for d := s.input.ScheduleStart; d.Before(s.input.ScheduleEnd.Add(utils.OneDay)); d = d.Add(utils.OneDay) {
 		weekday := d.Weekday().String()
+
+		// rank and sort available users depending of their number of available days
+		sortedUsers := sortUsersPerAvailabilityAndStats(s.input.Users, s.Stats)
 		ui := pagerduty.NewIterator(sortedUsers)
 
 		primary := s.processOverride("🅰️", d, lastUsers, ui, false, true)

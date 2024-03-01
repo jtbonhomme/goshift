@@ -6,8 +6,9 @@ import (
 )
 
 const (
-	TopAvailabilityRation    = 400
-	BottomAvailabilityRation = 40
+	TopAvailabilityRation    int = 400
+	BottomAvailabilityRation int = 40
+	StatsPenaltyFactor       int = 10
 )
 
 func maxIndex(a []int) int {
@@ -70,6 +71,25 @@ func sortUsersPerStats(users []pagerduty.User, stats map[string]int) []pagerduty
 		j := minIndex(rank)
 		sortedUsers = append(sortedUsers, users[j])
 		rank[j] = math.MaxInt
+	}
+
+	return sortedUsers
+}
+
+func sortUsersPerAvailabilityAndStats(users []pagerduty.User, stats map[string]int) []pagerduty.User {
+	var sortedUsers = []pagerduty.User{}
+
+	// rank users
+	var rank = make([]int, len(users))
+	for i, user := range users {
+		rank[i] = int(TopAvailabilityRation/(BottomAvailabilityRation-len(user.Unavailable))) - stats[user.Email]*StatsPenaltyFactor
+	}
+
+	// sort per ranking
+	for i := 0; i < len(users); i++ {
+		j := maxIndex(rank)
+		sortedUsers = append(sortedUsers, users[j])
+		rank[j] = -1
 	}
 
 	return sortedUsers
