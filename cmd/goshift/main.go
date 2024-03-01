@@ -7,10 +7,8 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/jtbonhomme/goshift/internal/pagerduty"
 	"github.com/jtbonhomme/goshift/internal/schedule"
@@ -32,9 +30,7 @@ func main() {
 
 	fmt.Println("goshift")
 	var csvPath string
-	var noShuffle bool
 	flag.StringVar(&csvPath, "csv", "", "[mandatory] framadate csv file path")
-	flag.BoolVar(&noShuffle, "n", false, "[optional] do not shuffle users before creating shifts")
 	flag.Parse()
 
 	if csvPath == "" {
@@ -68,10 +64,6 @@ func main() {
 	}
 
 	input := utils.ParseFramadateCSV(data)
-	rand.Seed(time.Now().UnixNano())
-	if !noShuffle {
-		rand.Shuffle(len(input.Users), func(i, j int) { input.Users[i], input.Users[j] = input.Users[j], input.Users[i] })
-	}
 
 	sv := solver.New(input, users, newbies)
 	primary, secondary, err := sv.Run()

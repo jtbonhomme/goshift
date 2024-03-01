@@ -31,7 +31,7 @@ func (s *Solver) processOverride(label string, d time.Time, lastUsers []pagerdut
 
 		// already too much shifts for this user
 		//if s.Stats[n] > utils.Max(stats) || s.Stats[n] > utils.MinWithoutZero(stats)+1 || s.Stats[n] > utils.Average(stats)+1 {
-		if checkStats && s.Stats[user.Email] > utils.Average(s.Stats) {
+		if checkStats && s.Stats[user.Email] > utils.Average(s.Stats)+1 {
 			fmt.Println(" stats too high --> NEXT")
 			continue
 		}
