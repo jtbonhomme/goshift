@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -107,8 +108,9 @@ func main() {
 
 	log.Info().Msg("")
 
+	h := color.New(color.FgHiBlue).Add(color.Bold)
 	log.Info().Msgf("+%s+----+----+", strings.Repeat("-", 62))
-	log.Info().Msg("| Email                                                        |  S |  W |")
+	log.Info().Msgf("| %s                                                        |  %s |  %s |", h.Sprint("Email"), h.Sprint("S"), h.Sprint("W"))
 	log.Info().Msgf("+%s+----+----+", strings.Repeat("-", 62))
 
 	for _, user := range input.Users {
