@@ -18,6 +18,15 @@ import (
 	"github.com/jtbonhomme/goshift/internal/utils"
 )
 
+var newbies []string = []string{
+	"valerio.figliuolo@contentsquare.com",
+	"ahmed.khaled@contentsquare.com",
+	"houssem.touansi@contentsquare.com",
+	"kevin.albes@contentsquare.com",
+	"yunbo.wang@contentsquare.com",
+	"wael.tekaya@contentsquare.com",
+}
+
 func main() {
 	var err error
 
@@ -64,8 +73,8 @@ func main() {
 		rand.Shuffle(len(input.Users), func(i, j int) { input.Users[i], input.Users[j] = input.Users[j], input.Users[i] })
 	}
 
-	sv := solver.New(input, users)
-	primary, secondary, pstats, sstats, wstats, err := sv.Run()
+	sv := solver.New(input, users, newbies)
+	primary, secondary, err := sv.Run()
 	if err != nil {
 		panic(err)
 	}
@@ -76,8 +85,8 @@ func main() {
 		fmt.Printf("- %s %s %s: %s | %s\n", weekday, margin, primary.Overrides[i].Start, primary.Overrides[i].User, secondary.Overrides[i].User)
 	}
 
-	for i := 0; i < len(input.Users); i++ {
-		fmt.Printf("* user %s: %d | %d | %d\n", input.Users[i].Email, pstats[i], sstats[i], wstats[i])
+	for _, user := range input.Users {
+		fmt.Printf("* user %s: %d | %d | %d\n", user.Email, sv.PrimaryStats[user.Email], sv.SecondaryStats[user.Email], sv.WeekendStats[user.Email])
 	}
 
 	p, err := json.MarshalIndent(primary, "", "  ")

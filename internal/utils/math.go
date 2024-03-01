@@ -4,48 +4,48 @@ import (
 	"math"
 )
 
-func Average(stats []int, total int) int {
+func Average(stats map[string]int, total int) int {
 	var cumul int
 
-	for _, s := range stats {
-		cumul += s
+	for _, val := range stats {
+		cumul += val
 	}
 
 	return int(cumul / total)
 }
 
-func Max(stats []int) int {
+func Max(stats map[string]int) int {
 	var max int
 
-	for _, s := range stats {
-		if s > max {
-			max = s
+	for _, val := range stats {
+		if val > max {
+			max = val
 		}
 	}
 
 	return max
 }
 
-func Min(stats []int) int {
+func Min(stats map[string]int) int {
 	var min int
 
 	min = math.MaxInt
-	for _, s := range stats {
-		if s < min {
-			min = s
+	for _, val := range stats {
+		if val < min {
+			min = val
 		}
 	}
 
 	return min
 }
 
-func MinWithoutZero(stats []int) int {
+func MinWithoutZero(stats map[string]int) int {
 	var min int
 
 	min = math.MaxInt
-	for _, s := range stats {
-		if s != 0 && s < min {
-			min = s
+	for _, val := range stats {
+		if val != 0 && val < min {
+			min = val
 		}
 	}
 

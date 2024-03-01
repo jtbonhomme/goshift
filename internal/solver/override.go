@@ -9,141 +9,61 @@ import (
 	"github.com/jtbonhomme/goshift/internal/utils"
 )
 
-func (s *Solver) nextAvailableUser(d time.Time) (pagerduty.User, int, bool) {
-	var found bool
-	var n int
-	var user pagerduty.User
-	weekday := d.Weekday().String()
-
-	for i := 0; i < len(s.input.Users) && !found; i++ {
-		user, n = s.ui.Next()
-		if !slices.Contains(user.Unavailable, d) {
-			// user not available on Sunday and current day is Saturday
-			if weekday == time.Saturday.String() &&
-				slices.Contains(user.Unavailable, d.Add(utils.OneDay)) {
-				continue
-			}
-			found = true
-			break
-		}
-	}
-
-	return user, n, found
-}
-
-func (s *Solver) processPrimaryOverride(d time.Time, lastPrimaryUser pagerduty.AssignedUser) (pagerduty.Override, int) {
-	var nPrim int
-	primary := pagerduty.Override{
+func (s *Solver) processOverride(label string, d time.Time, lastUsers []pagerduty.AssignedUser, ui *pagerduty.UserIterator, isSecondary, checkStats bool) pagerduty.Override {
+	override := pagerduty.Override{
 		Start: d,
 		End:   d.Add(utils.OneDay),
 	}
+
 	weekday := d.Weekday().String()
+
+	var excludedUsers = []string{}
+	var stats = s.PrimaryStats
+	if isSecondary {
+		excludedUsers = s.secondaryExcludedUsers
+		stats = s.SecondaryStats
+	}
 
 	// primary schedule override
-	for i := 0; i < len(s.input.Users); i++ {
-		user, n := s.ui.Next()
-		fmt.Printf("\t🅰️ [%s] considering %s (%d) with %d shifts for primary (avgShifts: %d - maxShifts: %d)", d.String(), user.Email, n, s.primaryStats[n], utils.Average(s.primaryStats, len(s.input.Users)), utils.Max(s.primaryStats))
+	for i := 0; i < ui.Len(excludedUsers); i++ {
+		user, _ := ui.NextWithExclude(excludedUsers)
+		fmt.Printf("\t%s [%s] considering %s: %d | %d shifts (avgShifts: %d - maxShifts: %d)", label, d.String(), user.Email, stats[user.Email], s.WeekendStats[user.Email], utils.Average(stats, ui.Len(excludedUsers)), utils.Max(stats))
 
-		if !slices.Contains(user.Unavailable, d) {
-			// user not available on Sunday and current day is Saturday
-			if weekday == time.Saturday.String() &&
-				slices.Contains(user.Unavailable, d.Add(utils.OneDay)) {
-				fmt.Println(" not available on Sunday --> NEXT")
-				continue
-			}
-
-			// already too much shifts for this user
-			if s.primaryStats[n] > utils.Max(s.primaryStats) || s.primaryStats[n] > utils.MinWithoutZero(s.primaryStats)+1 || s.primaryStats[n] > utils.Average(s.primaryStats, len(s.input.Users))+1 {
-				fmt.Println(" stats too high --> NEXT")
-				continue
-			}
-
-			u, err := pagerduty.RetrieveUser(user, s.users)
-			if err != nil {
-				fmt.Printf("error: %s\n", err.Error())
-				continue
-			}
-
-			if u == lastPrimaryUser {
-				fmt.Println(" user already selected previous day --> NEXT")
-				continue
-			}
-
-			if weekday == time.Saturday.String() && s.weekendStats[n] > utils.Average(s.weekendStats, len(s.input.Users)) {
-				fmt.Println(" too much week-ends --> NEXT")
-				continue
-			}
-
-			primary.User = u
-			s.primaryStats[n]++
-			nPrim = n
-			fmt.Println(" --> SELECTED")
-
-			break
+		// already too much shifts for this user
+		//if stats[n] > utils.Max(stats) || stats[n] > utils.MinWithoutZero(stats)+1 || stats[n] > utils.Average(stats, ui.Len(excludedUsers))+1 {
+		if checkStats && stats[user.Email] > utils.Average(stats, ui.Len(excludedUsers))+1 {
+			fmt.Println(" stats too high --> NEXT")
+			continue
 		}
-		fmt.Println(" not available --> NEXT")
-	}
 
-	return primary, nPrim
-}
-
-func (s *Solver) processSecondaryOverride(d time.Time, lastSecondaryUser pagerduty.AssignedUser) (pagerduty.Override, int) {
-	var nSec int
-	secondary := pagerduty.Override{
-		Start: d,
-		End:   d.Add(utils.OneDay),
-	}
-	weekday := d.Weekday().String()
-
-	// secondary schedule override
-	for i := 0; i < len(s.input.Users); i++ {
-		user, n := s.ui.Next()
-		fmt.Printf("\t🅱️ [%s] considering %s (%d) with %d shifts for secondary (avgShifts: %d - maxShifts: %d)", d.String(), user.Email, n, s.primaryStats[n], utils.Average(s.secondaryStats, len(s.input.Users)), utils.Max(s.secondaryStats))
-
-		if !slices.Contains(user.Unavailable, d) {
-			// no newbie as secondary at beginning
-			if slices.Contains(newbies, user.Email) {
-				fmt.Println(" is a newbie --> NEXT")
-				continue
-			}
-
-			// user not available this day
-			if weekday == time.Saturday.String() &&
-				slices.Contains(user.Unavailable, d.Add(utils.OneDay)) {
-				fmt.Println(" not available on Sunday --> NEXT")
-				continue
-			}
-
-			// already too much shifts for this user
-			if s.secondaryStats[n] > utils.MinWithoutZero(s.secondaryStats)+1 {
-				fmt.Println(" stats too high --> NEXT")
-				continue
-			}
-
-			u, err := pagerduty.RetrieveUser(user, s.users)
-			if err != nil {
-				fmt.Printf("error: %s\n", err.Error())
-				continue
-			}
-
-			if u == lastSecondaryUser {
-				fmt.Println(" user already selected previous day --> NEXT")
-				continue
-			}
-
-			if weekday == time.Saturday.String() && s.weekendStats[n] > utils.Average(s.weekendStats, len(s.input.Users)) {
-				fmt.Println(" too much week-ends --> NEXT")
-				continue
-			}
-
-			secondary.User = u
-			s.secondaryStats[n]++
-			nSec = n
-			fmt.Printf(" --> SELECTED\n\n")
-			break
+		if checkStats && weekday == time.Saturday.String() && s.WeekendStats[user.Email] > utils.Average(s.WeekendStats, ui.Len(excludedUsers)) {
+			fmt.Println(" too much week-ends --> NEXT")
+			continue
 		}
-		fmt.Println(" not available --> NEXT")
+
+		u, err := pagerduty.RetrieveAssignedUser(user, s.users)
+		if err != nil {
+			fmt.Printf("error: %s\n", err.Error())
+			continue
+		}
+
+		if slices.Contains(lastUsers, u) {
+			fmt.Println(" user already selected previous day --> NEXT")
+			continue
+		}
+
+		override.User = u
+		if isSecondary {
+			n := s.SecondaryStats[user.Email]
+			s.SecondaryStats[user.Email] = n + 1
+		} else {
+			n := s.PrimaryStats[user.Email]
+			s.PrimaryStats[user.Email] = n + 1
+		}
+		fmt.Println(" --> SELECTED")
+
+		break
 	}
 
-	return secondary, nSec
+	return override
 }

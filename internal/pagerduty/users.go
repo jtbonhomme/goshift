@@ -40,6 +40,14 @@ func NewIterator(users []User) *UserIterator {
 	return &ui
 }
 
+func (ui *UserIterator) Len(exclude []string) int {
+	if exclude == nil {
+		return len(ui.Users)
+	}
+
+	return len(ui.Users) - len(exclude)
+}
+
 func (ui *UserIterator) NextWithExclude(exclude []string) (User, int) {
 	if exclude == nil {
 		return ui.Next()
@@ -48,10 +56,11 @@ func (ui *UserIterator) NextWithExclude(exclude []string) (User, int) {
 	var found bool
 	var k int
 
-	for found {
+	for !found {
 		k = ui.iterator % len(ui.Users)
 		ui.iterator++
 		if !slices.Contains(exclude, ui.Users[k].Email) {
+			found = true
 			break
 		}
 	}
@@ -66,7 +75,7 @@ func (ui *UserIterator) Next() (User, int) {
 	return ui.Users[k], k
 }
 
-func RetrieveUser(user User, users Users) (AssignedUser, error) {
+func RetrieveAssignedUser(user User, users Users) (AssignedUser, error) {
 	for _, u := range users.Users {
 		if u.Email == user.Email {
 			return AssignedUser{

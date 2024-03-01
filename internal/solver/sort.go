@@ -1,8 +1,6 @@
 package solver
 
 import (
-	"time"
-
 	"github.com/jtbonhomme/goshift/internal/pagerduty"
 )
 
@@ -24,8 +22,8 @@ func maxIndex(a []int) int {
 	return maxIndex
 }
 
-func sortAvailableUsers(users []pagerduty.User, d time.Time) []pagerduty.User {
-	var sortedAvailableUsers = []pagerduty.User{}
+func sortUsers(users []pagerduty.User) []pagerduty.User {
+	var sortedUsers = []pagerduty.User{}
 
 	// rank users
 	var rank = make([]int, len(users))
@@ -36,9 +34,9 @@ func sortAvailableUsers(users []pagerduty.User, d time.Time) []pagerduty.User {
 	// sort per ranking
 	for i := 0; i < len(users); i++ {
 		j := maxIndex(rank)
-		sortedAvailableUsers = append(sortedAvailableUsers, users[j])
+		sortedUsers = append(sortedUsers, users[j])
 		rank[j] = -1
 	}
 
-	return sortedAvailableUsers
+	return sortedUsers
 }

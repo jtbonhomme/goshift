@@ -2,48 +2,44 @@ package solver
 
 import (
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/jtbonhomme/goshift/internal/pagerduty"
 	"github.com/jtbonhomme/goshift/internal/utils"
 )
 
-var newbies []string = []string{
-	"valerio.figliuolo@contentsquare.com",
-	"ahmed.khaled@contentsquare.com",
-	"houssem.touansi@contentsquare.com",
-	"kevin.albes@contentsquare.com",
-	"yunbo.wang@contentsquare.com",
-	"wael.tekaya@contentsquare.com",
-}
-
 type Solver struct {
-	input          pagerduty.Input
-	users          pagerduty.Users
-	primaryStats   []int
-	weekendStats   []int
-	secondaryStats []int
-	ui             *pagerduty.UserIterator
+	input                  pagerduty.Input
+	users                  pagerduty.Users
+	PrimaryStats           map[string]int
+	WeekendStats           map[string]int
+	SecondaryStats         map[string]int
+	secondaryExcludedUsers []string
 }
 
-func New(input pagerduty.Input, users pagerduty.Users) *Solver {
-	primaryStats := make([]int, len(input.Users))
-	weekendStats := make([]int, len(input.Users))
-	secondaryStats := make([]int, len(input.Users))
-	ui := pagerduty.NewIterator(input.Users)
+func New(input pagerduty.Input, users pagerduty.Users, secondaryExcludedUsers []string) *Solver {
+	// initialize maps
+	PrimaryStats := make(map[string]int, len(input.Users))
+	WeekendStats := make(map[string]int, len(input.Users))
+	SecondaryStats := make(map[string]int, len(input.Users))
+
+	for _, user := range input.Users {
+		PrimaryStats[user.Email] = 0
+		WeekendStats[user.Email] = 0
+		SecondaryStats[user.Email] = 0
+	}
 
 	return &Solver{
-		input:          input,
-		users:          users,
-		primaryStats:   primaryStats,
-		weekendStats:   weekendStats,
-		secondaryStats: secondaryStats,
-		ui:             ui,
+		input:                  input,
+		users:                  users,
+		PrimaryStats:           PrimaryStats,
+		WeekendStats:           WeekendStats,
+		SecondaryStats:         SecondaryStats,
+		secondaryExcludedUsers: secondaryExcludedUsers,
 	}
 }
 
-func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, []int, []int, []int, error) {
+func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, error) {
 	var err error
 	var overridesPrimary = pagerduty.Overrides{
 		Overrides: []pagerduty.Override{},
@@ -52,105 +48,42 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, []int, []int, 
 		Overrides: []pagerduty.Override{},
 	}
 
-	var lastPrimaryUser, lastSecondaryUser pagerduty.AssignedUser
+	var lastUsers = []pagerduty.AssignedUser{}
+
+	// rank and sort available users depending of their number of available days
+	sortedUsers := sortUsers(s.input.Users)
+	ui := pagerduty.NewIterator(sortedUsers)
 
 	// build shifts
 	for d := s.input.ScheduleStart; d.Before(s.input.ScheduleEnd.Add(utils.OneDay)); d = d.Add(utils.OneDay) {
 		weekday := d.Weekday().String()
 
-		// filter out unavailable users
-		availableUsersOnly := filterUnavailableUsers(s.input.Users, d)
-
-		// rank and sort available users depending of their number of available days
-		sortedAvailableUsers := sortAvailableUsers(availableUsersOnly, d)
-		fmt.Println(sortedAvailableUsers)
-
-		primary, nPrim := s.processPrimaryOverride(d, lastPrimaryUser)
-		lastPrimaryUser = primary.User
-		secondary, nSec := s.processSecondaryOverride(d, lastSecondaryUser)
-		lastSecondaryUser = secondary.User
+		primary := s.processOverride("🅰️", d, lastUsers, ui, false, true)
+		lastUsers = append(lastUsers, primary.User)
+		secondary := s.processOverride("🅱️", d, lastUsers, ui, true, true)
 
 		// check shift
 		if primary.User.Name == "" {
 			fmt.Printf("\t⚠️ could not find any primary, need to reselect another user: ")
 			// try to pick very first name available
-			for i := 0; i < len(s.input.Users); i++ {
-				user, n := s.ui.Next()
-				if !slices.Contains(user.Unavailable, d) &&
-					(weekday != time.Saturday.String() ||
-						(weekday == time.Saturday.String() && !slices.Contains(user.Unavailable, d.Add(utils.OneDay)))) {
-					u, err := pagerduty.RetrieveUser(user, s.users)
-					if err != nil {
-						fmt.Printf("error: %s\n", err.Error())
-						continue
-					}
-					primary.User = u
-					s.primaryStats[n]++
-					nPrim = n
-					fmt.Printf("%s\n", u.Name)
-					break
-				}
-			}
+			primary := s.processOverride("🅰️", d, lastUsers, ui, false, false)
+			lastUsers = append(lastUsers, secondary.User)
 			if primary.User.Name == "" {
-				return pagerduty.Overrides{}, pagerduty.Overrides{}, nil, nil, nil, fmt.Errorf("empty user for primary on %s", primary.Start)
+				return pagerduty.Overrides{}, pagerduty.Overrides{}, fmt.Errorf("empty user for primary on %s", primary.Start)
 			}
 		}
 
 		if secondary.User.Name == "" {
 			// try to pick very first name available
-			for i := 0; i < len(s.input.Users); i++ {
-				user, n := s.ui.Next()
-				if !slices.Contains(user.Unavailable, d) &&
-					(weekday != time.Saturday.String() ||
-						(weekday == time.Saturday.String() && !slices.Contains(user.Unavailable, d.Add(utils.OneDay)))) {
-					// no newbie as secondary at beginning
-					if slices.Contains(newbies, user.Email) {
-						continue
-					}
-
-					u, err := pagerduty.RetrieveUser(user, s.users)
-					if err != nil {
-						fmt.Printf("error: %s\n", err.Error())
-						continue
-					}
-					secondary.User = u
-					s.secondaryStats[n]++
-					nSec = n
-					break
-				}
-			}
+			secondary := s.processOverride("🅱️", d, lastUsers, ui, true, false)
+			lastUsers = append(lastUsers, secondary.User)
 			if secondary.User.Name == "" {
-				return pagerduty.Overrides{}, pagerduty.Overrides{}, nil, nil, nil, fmt.Errorf("empty user for secondary on %s", secondary.Start)
+				return pagerduty.Overrides{}, pagerduty.Overrides{}, fmt.Errorf("empty user for secondary on %s", secondary.Start)
 			}
 		}
 
 		if primary.User == secondary.User {
-			// try to pick very first other name available
-			for i := 0; i < len(s.input.Users); i++ {
-				user, n := s.ui.Next()
-				if !slices.Contains(user.Unavailable, d) &&
-					(weekday != time.Saturday.String() ||
-						(weekday == time.Saturday.String() && !slices.Contains(user.Unavailable, d.Add(utils.OneDay)))) {
-					// no newbie as secondary at beginning
-					if slices.Contains(newbies, user.Email) {
-						continue
-					}
-
-					u, err := pagerduty.RetrieveUser(user, s.users)
-					if err != nil {
-						fmt.Printf("error: %s\n", err.Error())
-						continue
-					}
-					secondary.User = u
-					s.secondaryStats[n]++
-					nSec = n
-					break
-				}
-			}
-
-			if primary.User == secondary.User {
-				return pagerduty.Overrides{}, pagerduty.Overrides{}, nil, nil, nil, fmt.Errorf("same user for primary and secondary on %s", primary.Start)
-			}
+			return pagerduty.Overrides{}, pagerduty.Overrides{}, fmt.Errorf("same user for primary and secondary on %s", primary.Start)
 		}
 
 		overridesPrimary.Overrides = append(overridesPrimary.Overrides, primary)
@@ -168,13 +101,18 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, []int, []int, 
 				End:   secondary.End.Add(utils.OneDay),
 				User:  secondary.User,
 			})
-			s.primaryStats[nPrim]++
-			s.secondaryStats[nSec]++
-			s.weekendStats[nPrim]++
-			s.weekendStats[nSec]++
+
+			s.PrimaryStats[primary.User.Email]++
+			s.SecondaryStats[secondary.User.Email]++
+			s.WeekendStats[primary.User.Email]++
+			s.WeekendStats[secondary.User.Email]++
 			d = d.Add(utils.OneDay)
 		}
+
+		lastUsers = []pagerduty.AssignedUser{}
+		lastUsers = append(lastUsers, primary.User)
+		lastUsers = append(lastUsers, secondary.User)
 	}
 
-	return overridesPrimary, overridesSecondary, s.primaryStats, s.secondaryStats, s.weekendStats, err
+	return overridesPrimary, overridesSecondary, err
 }
