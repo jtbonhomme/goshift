@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/jtbonhomme/goshift/internal/pagerduty"
 	"github.com/jtbonhomme/goshift/internal/schedule"
@@ -16,22 +18,22 @@ import (
 	"github.com/jtbonhomme/goshift/internal/utils"
 )
 
-var newbies []string = []string{
-	"valerio.figliuolo@contentsquare.com",
-	"ahmed.khaled@contentsquare.com",
-	"houssem.touansi@contentsquare.com",
-	"kevin.albes@contentsquare.com",
-	"yunbo.wang@contentsquare.com",
-	"wael.tekaya@contentsquare.com",
-}
-
 func main() {
 	var err error
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	fmt.Println("goshift")
+	log.Info().Msg("goshift")
 	var csvPath string
+	var debug bool
+	flag.BoolVar(&debug, "debug", false, "sets log level to debug")
 	flag.StringVar(&csvPath, "csv", "", "[mandatory] framadate csv file path")
 	flag.Parse()
+
+	if debug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	} else {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	}
 
 	if csvPath == "" {
 		panic(errors.New("framadate csv file is missing"))
@@ -40,16 +42,22 @@ func main() {
 	usersJson, err := os.Open("/Users/jean-thierry.bonhomme/Documents/Contentsquare/pagerduty-users.json")
 	if err != nil {
 	}
-	fmt.Println("Successfully opened users.json")
+	log.Info().Msg("Successfully opened users.json")
 	defer usersJson.Close()
 	usersValue, _ := ioutil.ReadAll(usersJson)
 
-	// we initialize our Users array
 	var users pagerduty.Users
-
-	// we unmarshal our byteArray which contains our
-	// jsonFile's content into 'users' which we defined above
 	json.Unmarshal(usersValue, &users)
+
+	newbiesJson, err := os.Open("/Users/jean-thierry.bonhomme/Documents/Contentsquare/pagerduty-newbies.json")
+	if err != nil {
+	}
+	log.Info().Msg("Successfully opened newbies.json")
+	defer newbiesJson.Close()
+	newbiesValue, _ := ioutil.ReadAll(newbiesJson)
+
+	var newbies []string
+	json.Unmarshal(newbiesValue, &newbies)
 
 	f, err := os.Open(csvPath)
 	if err != nil {
@@ -71,7 +79,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println("")
+	log.Info().Msg("")
 
 	p, err := json.MarshalIndent(primary, "", "  ")
 	if err != nil {
@@ -97,15 +105,15 @@ func main() {
 
 	schedule.DisplayCalendar("Secondary on-call shift", secondary)
 
-	fmt.Println("")
+	log.Info().Msg("")
 
-	fmt.Printf("+%s+----+----+\n", strings.Repeat("-", 62))
-	fmt.Println("| Email                                                        |  S |  W |")
-	fmt.Printf("+%s+----+----+\n", strings.Repeat("-", 62))
+	log.Info().Msgf("+%s+----+----+", strings.Repeat("-", 62))
+	log.Info().Msg("| Email                                                        |  S |  W |")
+	log.Info().Msgf("+%s+----+----+", strings.Repeat("-", 62))
 
 	for _, user := range input.Users {
-		fmt.Printf("| %s %s| %2d | %2d |\n", user.Email, strings.Repeat(" ", 60-len(user.Email)), sv.Stats[user.Email], sv.WeekendStats[user.Email])
+		log.Info().Msgf("| %s %s| %2d | %2d |", user.Email, strings.Repeat(" ", 60-len(user.Email)), sv.Stats[user.Email], sv.WeekendStats[user.Email])
 	}
-	fmt.Printf("+%s+----+----+\n", strings.Repeat("-", 62))
-	fmt.Println("")
+	log.Info().Msgf("+%s+----+----+", strings.Repeat("-", 62))
+	log.Info().Msg("")
 }

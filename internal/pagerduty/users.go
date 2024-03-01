@@ -56,7 +56,6 @@ func (ui *UserIterator) NextWithExclude(exclude []string) (User, int, bool) {
 
 	var found bool
 	var k int
-	fmt.Println("start loop")
 
 	for i := 0; i < len(ui.Users); i++ {
 		k = ui.iterator % len(ui.Users)

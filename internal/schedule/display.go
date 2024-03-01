@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/rs/zerolog/log"
 
 	"github.com/jtbonhomme/goshift/internal/pagerduty"
 )
@@ -40,16 +41,16 @@ func DisplayCalendar(title string, schedule pagerduty.Overrides) {
 	month := start.Month()
 	year := start.Year()
 
-	fmt.Println(title)
-	fmt.Println("")
+	log.Info().Msg(title)
+	log.Info().Msg("")
 	printHeader(month, year)
 
 	day := 1
 	printFirstWeek(&day, start, schedule)
 	printOtherWeeks(day, start, schedule)
 
-	fmt.Println("")
-	fmt.Println("")
+	log.Info().Msg("")
+	log.Info().Msg("")
 }
 
 const (
@@ -61,48 +62,51 @@ const (
 func printHeader(month time.Month, year int) {
 	c1 := color.New(color.FgHiBlue).Add(color.Bold)
 	c2 := color.New(color.FgHiCyan).Add(color.Bold)
-	c1.Printf("%s %d", months[month-1], year)
-	c1.Println("")
-	c2.Println(strings.Join(days[:], daySeparator+strings.Repeat(" ", nameLen)))
+	log.Info().Msg(c1.Sprintf("%s %d", months[month-1], year))
+	log.Info().Msg("")
+	log.Info().Msg(c2.Sprint(strings.Join(days[:], daySeparator+strings.Repeat(" ", nameLen))))
 }
 
 func printFirstWeek(day *int, start time.Time, schedule pagerduty.Overrides) {
 	f := beginningOfMonth(start).Weekday()
 	found := false
 
+	line := ""
 	for i, v := range days {
 		if f.String()[0:3] == v {
-			printDay(*day, i, start)
-			printName(*day, schedule)
+			line += printDay(*day, i, start)
+			line += printName(*day, schedule)
 			*day++
 			found = true
 			continue
 		} else {
 			if !found {
-				fmt.Print(daySeparator + monthStringLen + strings.Repeat(" ", nameLen))
+				line += fmt.Sprint(daySeparator + monthStringLen + strings.Repeat(" ", nameLen))
 			}
 		}
 
 		if found {
-			printDay(*day, i, start)
-			printName(*day, schedule)
+			line += printDay(*day, i, start)
+			line += printName(*day, schedule)
 			*day++
 		}
 	}
 
-	fmt.Println("")
+	log.Info().Msgf("%s", line)
 }
 
 func printOtherWeeks(day int, start time.Time, schedule pagerduty.Overrides) {
 	e := endOfMonth(start)
 	idx := 0
+	line := ""
 	for day <= e.Day() {
-		printDay(day, idx, start)
-		printName(day, schedule)
+		line += printDay(day, idx, start)
+		line += printName(day, schedule)
 		idx++
 
 		if idx >= len(days) {
-			fmt.Println("")
+			log.Info().Msgf("%s", line)
+			line = ""
 			idx = 0
 		}
 
@@ -110,7 +114,7 @@ func printOtherWeeks(day int, start time.Time, schedule pagerduty.Overrides) {
 	}
 }
 
-func printName(idx int, schedule pagerduty.Overrides) {
+func printName(idx int, schedule pagerduty.Overrides) string {
 	firstName := strings.Split(schedule.Overrides[idx-1].User.Name, " ")[0]
 	if len(firstName) > nameLen {
 		firstName = firstName[:nameLen]
@@ -118,29 +122,29 @@ func printName(idx int, schedule pagerduty.Overrides) {
 		firstName += strings.Repeat(" ", nameLen-len(firstName))
 	}
 
-	fmt.Print(firstName)
+	return firstName
 }
 
-func printDay(day int, idx int, start time.Time) {
+func printDay(day int, idx int, start time.Time) string {
 	workdayColor := color.New(color.FgWhite).Add(color.Bold)
 	holidayColor := color.New(color.FgHiCyan).Add(color.Bold)
 	currentDayColor := color.New(color.FgHiRed).Add(color.Bold)
 
 	if day > 9 {
 		if day == start.Day() {
-			currentDayColor.Printf(" %d%s", day, daySeparator)
+			return currentDayColor.Sprintf(" %d%s", day, daySeparator)
 		} else if idx == 5 || idx == 6 {
-			holidayColor.Printf(" %d%s", day, daySeparator)
+			return holidayColor.Sprintf(" %d%s", day, daySeparator)
 		} else {
-			workdayColor.Printf(" %d%s", day, daySeparator)
+			return workdayColor.Sprintf(" %d%s", day, daySeparator)
 		}
 	} else {
 		if day == start.Day() {
-			currentDayColor.Printf("  %d%s", day, daySeparator)
+			return currentDayColor.Sprintf("  %d%s", day, daySeparator)
 		} else if idx == 5 || idx == 6 {
-			holidayColor.Printf("  %d%s", day, daySeparator)
+			return holidayColor.Sprintf("  %d%s", day, daySeparator)
 		} else {
-			workdayColor.Printf("  %d%s", day, daySeparator)
+			return workdayColor.Sprintf("  %d%s", day, daySeparator)
 		}
 	}
 }

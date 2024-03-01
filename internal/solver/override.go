@@ -1,9 +1,10 @@
 package solver
 
 import (
-	"fmt"
 	"slices"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/jtbonhomme/goshift/internal/pagerduty"
 	"github.com/jtbonhomme/goshift/internal/utils"
@@ -28,38 +29,38 @@ func (s *Solver) processOverride(label string, d time.Time, lastUsers []pagerdut
 	for i := 0; i < len(s.input.Users); i++ {
 		user, _, ok := ui.NextWithExclude(excludedUsers)
 		if !ok {
-			fmt.Printf("\t%s [%s] error no result for next iterator with exclude\n", label, d.String())
+			log.Debug().Msgf("\t%s [%s] error no result for next iterator with exclude", label, d.String())
 			return override
 		}
 
-		fmt.Printf("\t%s [%s] considering %s: %d | %d shifts (avgShifts: %d - avgWeekends: %d)", label, d.String(), user.Email, s.Stats[user.Email], s.WeekendStats[user.Email], utils.Average(s.Stats), utils.Average(s.WeekendStats))
+		log.Debug().Msgf("\t%s [%s] considering %s: %d | %d shifts (avgShifts: %d - avgWeekends: %d)", label, d.String(), user.Email, s.Stats[user.Email], s.WeekendStats[user.Email], utils.Average(s.Stats), utils.Average(s.WeekendStats))
 
 		// already too much shifts for this user
 		//if s.Stats[n] > utils.Max(stats) || s.Stats[n] > utils.MinWithoutZero(stats)+1 || s.Stats[n] > utils.Average(stats)+1 {
 		if checkStats && s.Stats[user.Email] > utils.Average(s.Stats)+1 {
-			fmt.Println(" stats too high --> NEXT")
+			log.Debug().Msg(" stats too high --> NEXT")
 			continue
 		}
 
 		if checkStats && weekday == time.Saturday.String() && s.WeekendStats[user.Email] > utils.Average(s.WeekendStats) {
-			fmt.Println(" too much week-ends --> NEXT")
+			log.Debug().Msg(" too much week-ends --> NEXT")
 			continue
 		}
 
 		u, err := pagerduty.RetrieveAssignedUser(user, s.users)
 		if err != nil {
-			fmt.Printf("error: %s\n", err.Error())
+			log.Debug().Msgf("error: %s", err.Error())
 			continue
 		}
 
 		if slices.Contains(lastUsers, u) {
-			fmt.Println(" user already selected previous day --> NEXT")
+			log.Debug().Msg(" user already selected previous day --> NEXT")
 			continue
 		}
 
 		override.User = u
 		s.Stats[user.Email]++
-		fmt.Println(" --> SELECTED")
+		log.Debug().Msg(" --> SELECTED")
 
 		break
 	}

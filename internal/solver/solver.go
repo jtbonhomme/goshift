@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/jtbonhomme/goshift/internal/pagerduty"
 	"github.com/jtbonhomme/goshift/internal/utils"
 )
@@ -60,7 +62,7 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, error) {
 
 		// check shift
 		if primary.User.Name == "" {
-			fmt.Printf("⚠️ could not find any primary, need to reselect another user ⚠️\n")
+			log.Debug().Msg("⚠️ could not find any primary, need to reselect another user ⚠️")
 			// rank and sort available users depending of their stats
 			sorted := sortUsersPerStats(s.input.Users, s.Stats)
 			sui := pagerduty.NewIterator(sorted)
@@ -73,7 +75,7 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, error) {
 		}
 
 		if secondary.User.Name == "" {
-			fmt.Printf("⚠️ could not find any secondary, need to reselect another user ⚠️\n")
+			log.Debug().Msg("⚠️ could not find any secondary, need to reselect another user ⚠️")
 			// rank and sort available users depending of their stats
 			sorted := sortUsersPerStats(s.input.Users, s.Stats)
 			sui := pagerduty.NewIterator(sorted)
@@ -89,7 +91,7 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, error) {
 			return pagerduty.Overrides{}, pagerduty.Overrides{}, fmt.Errorf("same user for primary and secondary on %s", primary.Start)
 		}
 
-		fmt.Println("")
+		log.Debug().Msg("")
 
 		overridesPrimary.Overrides = append(overridesPrimary.Overrides, primary)
 		overridesSecondary.Overrides = append(overridesSecondary.Overrides, secondary)
