@@ -33,6 +33,11 @@ func (s *Solver) processOverride(label string, d time.Time, lastUsers []pagerdut
 			return override
 		}
 
+		if slices.Contains(user.Unavailable, d) {
+			log.Debug().Msg(" not available this day --> NEXT")
+			continue
+		}
+
 		log.Debug().Msgf("\t%s [%s] considering %s: %d | %d shifts (avgShifts: %d - avgWeekends: %d)", label, d.String(), user.Email, s.Stats[user.Email], s.WeekendStats[user.Email], utils.Average(s.Stats), utils.Average(s.WeekendStats))
 
 		// already too much shifts for this user

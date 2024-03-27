@@ -24,10 +24,12 @@ func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 	log.Info().Msg("goshift")
-	var csvPath string
+	var csvPath, usersPath, newbiesPath string
 	var debug bool
 	flag.BoolVar(&debug, "debug", false, "sets log level to debug")
 	flag.StringVar(&csvPath, "csv", "", "[mandatory] framadate csv file path")
+	flag.StringVar(&usersPath, "users", os.Getenv("HOME")+"/Documents/Contentsquare/pagerduty-users.json", "[optional] users json file path")
+	flag.StringVar(&newbiesPath, "newbies", os.Getenv("HOME")+"/Documents/Contentsquare/pagerduty-newbies.json", "[optional] newbies json file path")
 	flag.Parse()
 
 	if debug {
@@ -40,7 +42,7 @@ func main() {
 		panic(errors.New("framadate csv file is missing"))
 	}
 
-	usersJson, err := os.Open("/Users/jean-thierry.bonhomme/Documents/Contentsquare/pagerduty-users.json")
+	usersJson, err := os.Open(usersPath)
 	if err != nil {
 	}
 	log.Info().Msg("Successfully opened users.json")
@@ -50,7 +52,7 @@ func main() {
 	var users pagerduty.Users
 	json.Unmarshal(usersValue, &users)
 
-	newbiesJson, err := os.Open("/Users/jean-thierry.bonhomme/Documents/Contentsquare/pagerduty-newbies.json")
+	newbiesJson, err := os.Open(newbiesPath)
 	if err != nil {
 	}
 	log.Info().Msg("Successfully opened newbies.json")

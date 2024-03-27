@@ -4,7 +4,7 @@
 
 1. Ask oncall people to fill a framadate calendar for the month (example: https://framadate.org/2M5jvRhBTCshJycz)
 2. Download schedule as CSV from Framadate
-3. Download pagerduty users from API: 
+3. Download pagerduty schedule users from API: 
 ```sh
 curl -s -o ~/Documents/Contentsquare/pagerduty-users.json --request GET \
   --url https://api.pagerduty.com/schedules/<SCHEDULE-ID>/users \
@@ -38,3 +38,10 @@ This will create two files `primary.json` and `secondary.json`
   --header 'Content-Type: application/json' \
   --data @secondary.json
 ```
+
+## ToDO
+
+Use Teams / Members api:
+```sh
+curl -s -o ~/Documents/Contentsquare/pagerduty-members.json --request GET  --url https://api.pagerduty.com/teams/<TEAM-ID>/members  --header 'Accept: application/json'  --header 'Authorization: Token token=<API-KEY>'  --header 'Content-Type: application/json'
+``` 
