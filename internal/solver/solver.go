@@ -62,7 +62,7 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, error) {
 
 		// check shift
 		if primary.User.Name == "" {
-			log.Debug().Msg("⚠️ could not find any primary, need to reselect another user ⚠️")
+			log.Debug().Msg("⚠️ \tcould not find any primary, need to reselect another user \t⚠️")
 			// rank and sort available users depending of their stats
 			sorted := sortUsersPerStats(s.input.Users, s.Stats)
 			sui := pagerduty.NewIterator(sorted)
@@ -75,7 +75,7 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, error) {
 		}
 
 		if secondary.User.Name == "" {
-			log.Debug().Msg("⚠️ could not find any secondary, need to reselect another user ⚠️")
+			log.Debug().Msg("⚠️ \tcould not find any secondary, need to reselect another user \t⚠️")
 			// rank and sort available users depending of their stats
 			sorted := sortUsersPerStats(s.input.Users, s.Stats)
 			sui := pagerduty.NewIterator(sorted)

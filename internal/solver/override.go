@@ -49,7 +49,7 @@ func (s *Solver) processOverride(label string, d time.Time, lastUsers []pagerdut
 		}
 
 		// already too much week days shifts for this user
-		if checkStats && weekday != time.Saturday.String() && checkStats && s.Stats[user.Email] > utils.Min(s.Stats) {
+		if checkStats && weekday != time.Saturday.String() && s.Stats[user.Email] > utils.Min(s.Stats) {
 			log.Debug().Msg(" stats too high (> min) --> NEXT")
 			continue
 		}

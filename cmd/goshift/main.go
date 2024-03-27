@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 
@@ -44,34 +44,49 @@ func main() {
 
 	usersJson, err := os.Open(usersPath)
 	if err != nil {
+		panic(errors.New("unable to open users file " + usersPath + " : " + err.Error()))
 	}
 	log.Info().Msg("Successfully opened users.json")
 	defer usersJson.Close()
-	usersValue, _ := ioutil.ReadAll(usersJson)
+	usersValue, err := io.ReadAll(usersJson)
+	if err != nil {
+		panic(errors.New("unable to read json file : " + err.Error()))
+	}
 
 	var users pagerduty.Users
-	json.Unmarshal(usersValue, &users)
+	err = json.Unmarshal(usersValue, &users)
+	if err != nil {
+		panic(errors.New("unable to unmarshall users JSON value: " + err.Error()))
+	}
 
 	newbiesJson, err := os.Open(newbiesPath)
 	if err != nil {
+		panic(errors.New("unable to open newbies file " + newbiesPath + " : " + err.Error()))
 	}
+
 	log.Info().Msg("Successfully opened newbies.json")
 	defer newbiesJson.Close()
-	newbiesValue, _ := ioutil.ReadAll(newbiesJson)
+	newbiesValue, err := io.ReadAll(newbiesJson)
+	if err != nil {
+		panic(errors.New("unable to read json file : " + err.Error()))
+	}
 
 	var newbies []string
-	json.Unmarshal(newbiesValue, &newbies)
+	err = json.Unmarshal(newbiesValue, &newbies)
+	if err != nil {
+		panic(errors.New("unable to unmarshall newbies JSON value: " + err.Error()))
+	}
 
 	f, err := os.Open(csvPath)
 	if err != nil {
-		panic(err)
+		panic(errors.New("unable to open csv file " + csvPath + " : " + err.Error()))
 	}
 	defer f.Close()
 
 	csvReader := csv.NewReader(f)
 	data, err := csvReader.ReadAll()
 	if err != nil {
-		panic(err)
+		panic(errors.New("unable to read csv file : " + err.Error()))
 	}
 
 	input := utils.ParseFramadateCSV(data)
@@ -89,7 +104,7 @@ func main() {
 		panic(err)
 	}
 
-	err = ioutil.WriteFile("primary.json", p, 0644)
+	err = os.WriteFile("primary.json", p, 0644)
 	if err != nil {
 		panic(err)
 	}
@@ -101,7 +116,7 @@ func main() {
 		panic(err)
 	}
 
-	err = ioutil.WriteFile("secondary.json", s, 0644)
+	err = os.WriteFile("secondary.json", s, 0644)
 	if err != nil {
 		panic(err)
 	}

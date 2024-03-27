@@ -1,14 +1,15 @@
 package solver
 
 import (
-	"github.com/jtbonhomme/goshift/internal/pagerduty"
 	"math"
+
+	"github.com/jtbonhomme/goshift/internal/pagerduty"
 )
 
 const (
-	TopAvailabilityRation    int = 400
-	BottomAvailabilityRation int = 40
-	StatsPenaltyFactor       int = 10
+	TopAvailabilityRatio    int = 250
+	BottomAvailabilityRatio int = 50
+	StatsPenaltyFactor      int = 2
 )
 
 func maxIndex(a []int) int {
@@ -44,7 +45,7 @@ func sortUsersPerAvailability(users []pagerduty.User) []pagerduty.User {
 	// rank users
 	var rank = make([]int, len(users))
 	for i, user := range users {
-		rank[i] = int(TopAvailabilityRation / (BottomAvailabilityRation - len(user.Unavailable)))
+		rank[i] = int(TopAvailabilityRatio / (BottomAvailabilityRatio - len(user.Unavailable)))
 	}
 
 	// sort per ranking
@@ -82,7 +83,11 @@ func sortUsersPerAvailabilityAndStats(users []pagerduty.User, stats map[string]i
 	// rank users
 	var rank = make([]int, len(users))
 	for i, user := range users {
-		rank[i] = int(TopAvailabilityRation/(BottomAvailabilityRation-len(user.Unavailable))) - stats[user.Email]*StatsPenaltyFactor
+		r := int(TopAvailabilityRatio/(BottomAvailabilityRatio-len(user.Unavailable))) - stats[user.Email]*StatsPenaltyFactor
+		if r <= 0 {
+			r = 1
+		}
+		rank[i] = r
 	}
 
 	// sort per ranking
