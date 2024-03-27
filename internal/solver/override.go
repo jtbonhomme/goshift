@@ -25,14 +25,16 @@ func (s *Solver) processOverride(label string, d time.Time, lastUsers []pagerdut
 		excludedUsers = s.newbies
 	}
 
-	// primary schedule override
+	// schedule override
 	for i := 0; i < len(s.input.Users); i++ {
 		user, _, ok := ui.NextWithExclude(excludedUsers)
+		// pick next user in the list
 		if !ok {
 			log.Debug().Msgf("\t%s [%s] error no result for next iterator with exclude", label, d.String())
 			return override
 		}
 
+		// if user is un available that day, move to the next user
 		if slices.Contains(user.Unavailable, d) {
 			log.Debug().Msg(" not available this day --> NEXT")
 			continue
