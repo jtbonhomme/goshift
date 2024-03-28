@@ -64,7 +64,7 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, error) {
 		weekday := d.Weekday().String()
 
 		// rank and sort available users depending of their number of available days
-		sortedUsers := sortUsers(s.input.Users, s.Stats, "PerAvailabilitySimple")
+		sortedUsers := sortUsers(d, s.input.Users, s.Stats, "PerRemainingAvailability")
 		ui := pagerduty.NewIterator(sortedUsers)
 
 		primary := s.processOverride("🅰️", d, s.lastAssignedUsers, ui, false, true)
@@ -75,7 +75,7 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, error) {
 		if primary.User.Name == "" {
 			log.Debug().Msg("⚠️ \tcould not find any primary, need to reselect another user \t⚠️")
 			// rank and sort available users depending of their stats
-			sorted := sortUsers(s.input.Users, s.Stats, "PerStats")
+			sorted := sortUsers(d, s.input.Users, s.Stats, "PerStats")
 			sui := pagerduty.NewIterator(sorted)
 			// try to pick very first name available
 			primary = s.processOverride("🅰️", d, s.lastAssignedUsers, sui, false, false)
@@ -88,7 +88,7 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, error) {
 		if secondary.User.Name == "" {
 			log.Debug().Msg("⚠️ \tcould not find any secondary, need to reselect another user \t⚠️")
 			// rank and sort available users depending of their stats
-			sorted := sortUsers(s.input.Users, s.Stats, "PerStats")
+			sorted := sortUsers(d, s.input.Users, s.Stats, "PerStats")
 			sui := pagerduty.NewIterator(sorted)
 			// try to pick very first name available
 			secondary = s.processOverride("🅱️", d, s.lastAssignedUsers, sui, true, false)
