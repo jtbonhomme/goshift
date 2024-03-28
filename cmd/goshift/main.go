@@ -19,6 +19,17 @@ import (
 	"github.com/jtbonhomme/goshift/internal/utils"
 )
 
+type arrayFlags []string
+
+func (i *arrayFlags) String() string {
+	return "string slice representation"
+}
+
+func (i *arrayFlags) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
 func main() {
 	var err error
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
@@ -26,10 +37,14 @@ func main() {
 	log.Info().Msg("goshift")
 	var csvPath, usersPath, newbiesPath string
 	var debug bool
+	var lastUsers arrayFlags
+
 	flag.BoolVar(&debug, "debug", false, "sets log level to debug")
 	flag.StringVar(&csvPath, "csv", "", "[mandatory] framadate csv file path")
 	flag.StringVar(&usersPath, "users", os.Getenv("HOME")+"/Documents/Contentsquare/pagerduty-users.json", "[optional] users json file path")
 	flag.StringVar(&newbiesPath, "newbies", os.Getenv("HOME")+"/Documents/Contentsquare/pagerduty-newbies.json", "[optional] newbies json file path")
+	flag.Var(&lastUsers, "last", "[optional] last users emails of previous schedule")
+
 	flag.Parse()
 
 	if debug {
@@ -91,7 +106,7 @@ func main() {
 
 	input := utils.ParseFramadateCSV(data)
 
-	sv := solver.New(input, users, newbies)
+	sv := solver.New(input, users, newbies, []string(lastUsers))
 	primary, secondary, err := sv.Run()
 	if err != nil {
 		panic(err)

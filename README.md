@@ -2,6 +2,22 @@
 
 ## Usage
 
+```sh
+Usage of goshift:
+  -csv string
+        [mandatory] framadate csv file path
+  -debug
+        sets log level to debug
+  -last value
+        [optional] last users emails of previous schedule
+  -newbies string
+        [optional] newbies json file path")
+  -users string
+        [optional] users json file path")
+```
+
+## Get Started
+
 1. Ask oncall people to fill a framadate calendar for the month (example: https://framadate.org/2M5jvRhBTCshJycz)
 2. Download schedule as CSV from Framadate
 3. Download pagerduty schedule users from API: 

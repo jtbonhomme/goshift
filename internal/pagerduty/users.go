@@ -76,7 +76,7 @@ func (ui *UserIterator) Next() (User, int) {
 	return ui.Users[k], k
 }
 
-func RetrieveAssignedUser(user User, users Users) (AssignedUser, error) {
+func (users Users) RetrieveAssignedUser(user User) (AssignedUser, error) {
 	for _, u := range users.Users {
 		if u.Email == user.Email {
 			return AssignedUser{
@@ -89,4 +89,19 @@ func RetrieveAssignedUser(user User, users Users) (AssignedUser, error) {
 	}
 
 	return AssignedUser{}, fmt.Errorf("unknown user %s", user.Email)
+}
+
+func (users Users) RetrieveAssignedUserByEmail(email string) (AssignedUser, error) {
+	for _, u := range users.Users {
+		if u.Email == email {
+			return AssignedUser{
+				Name:  u.Name,
+				Email: u.Email,
+				ID:    u.ID,
+				Type:  u.Type,
+			}, nil
+		}
+	}
+
+	return AssignedUser{}, fmt.Errorf("unknown user %s", email)
 }

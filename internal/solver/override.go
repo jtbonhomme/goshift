@@ -54,7 +54,7 @@ func (s *Solver) processOverride(label string, d time.Time, lastUsers []pagerdut
 			continue
 		}
 
-		u, err := pagerduty.RetrieveAssignedUser(user, s.users)
+		u, err := s.users.RetrieveAssignedUser(user)
 		if err != nil {
 			log.Debug().Msgf("error: %s", err.Error())
 			continue

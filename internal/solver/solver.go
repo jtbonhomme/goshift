@@ -11,14 +11,15 @@ import (
 )
 
 type Solver struct {
-	input        pagerduty.Input
-	users        pagerduty.Users
-	Stats        map[string]int
-	WeekendStats map[string]int
-	newbies      []string
+	input             pagerduty.Input
+	users             pagerduty.Users
+	Stats             map[string]int
+	WeekendStats      map[string]int
+	newbies           []string
+	lastAssignedUsers []pagerduty.AssignedUser
 }
 
-func New(input pagerduty.Input, users pagerduty.Users, newbies []string) *Solver {
+func New(input pagerduty.Input, users pagerduty.Users, newbies, lastUsers []string) *Solver {
 	// initialize maps
 	Stats := make(map[string]int, len(input.Users))
 	WeekendStats := make(map[string]int, len(input.Users))
@@ -28,13 +29,25 @@ func New(input pagerduty.Input, users pagerduty.Users, newbies []string) *Solver
 		WeekendStats[user.Email] = 0
 	}
 
-	return &Solver{
-		input:        input,
-		users:        users,
-		Stats:        Stats,
-		WeekendStats: WeekendStats,
-		newbies:      newbies,
+	lastAssignedUsers := []pagerduty.AssignedUser{}
+	for _, email := range lastUsers {
+		u, err := users.RetrieveAssignedUserByEmail(email)
+		if err != nil {
+			log.Debug().Msgf("error: %s", err.Error())
+			continue
+		}
+		lastAssignedUsers = append(lastAssignedUsers, u)
 	}
+
+	return &Solver{
+		input:             input,
+		users:             users,
+		Stats:             Stats,
+		WeekendStats:      WeekendStats,
+		newbies:           newbies,
+		lastAssignedUsers: lastAssignedUsers,
+	}
+
 }
 
 func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, error) {
@@ -46,8 +59,6 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, error) {
 		Overrides: []pagerduty.Override{},
 	}
 
-	var lastUsers = []pagerduty.AssignedUser{}
-
 	// build shifts
 	for d := s.input.ScheduleStart; d.Before(s.input.ScheduleEnd.Add(utils.OneDay)); d = d.Add(utils.OneDay) {
 		weekday := d.Weekday().String()
@@ -56,9 +67,9 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, error) {
 		sortedUsers := sortUsers(s.input.Users, s.Stats, "PerAvailabilitySimple")
 		ui := pagerduty.NewIterator(sortedUsers)
 
-		primary := s.processOverride("🅰️", d, lastUsers, ui, false, true)
-		lastUsers = append(lastUsers, primary.User)
-		secondary := s.processOverride("🅱️", d, lastUsers, ui, true, true)
+		primary := s.processOverride("🅰️", d, s.lastAssignedUsers, ui, false, true)
+		s.lastAssignedUsers = append(s.lastAssignedUsers, primary.User)
+		secondary := s.processOverride("🅱️", d, s.lastAssignedUsers, ui, true, true)
 
 		// check shift
 		if primary.User.Name == "" {
@@ -67,8 +78,8 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, error) {
 			sorted := sortUsers(s.input.Users, s.Stats, "PerStats")
 			sui := pagerduty.NewIterator(sorted)
 			// try to pick very first name available
-			primary = s.processOverride("🅰️", d, lastUsers, sui, false, false)
-			lastUsers = append(lastUsers, primary.User)
+			primary = s.processOverride("🅰️", d, s.lastAssignedUsers, sui, false, false)
+			s.lastAssignedUsers = append(s.lastAssignedUsers, primary.User)
 			if primary.User.Name == "" {
 				return pagerduty.Overrides{}, pagerduty.Overrides{}, fmt.Errorf("empty user for primary on %s", primary.Start)
 			}
@@ -80,8 +91,8 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, error) {
 			sorted := sortUsers(s.input.Users, s.Stats, "PerStats")
 			sui := pagerduty.NewIterator(sorted)
 			// try to pick very first name available
-			secondary = s.processOverride("🅱️", d, lastUsers, sui, true, false)
-			lastUsers = append(lastUsers, secondary.User)
+			secondary = s.processOverride("🅱️", d, s.lastAssignedUsers, sui, true, false)
+			s.lastAssignedUsers = append(s.lastAssignedUsers, secondary.User)
 			if secondary.User.Name == "" {
 				return pagerduty.Overrides{}, pagerduty.Overrides{}, fmt.Errorf("empty user for secondary on %s", secondary.Start)
 			}
@@ -116,9 +127,9 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, error) {
 			d = d.Add(utils.OneDay)
 		}
 
-		lastUsers = []pagerduty.AssignedUser{}
-		lastUsers = append(lastUsers, primary.User)
-		lastUsers = append(lastUsers, secondary.User)
+		s.lastAssignedUsers = []pagerduty.AssignedUser{}
+		s.lastAssignedUsers = append(s.lastAssignedUsers, primary.User)
+		s.lastAssignedUsers = append(s.lastAssignedUsers, secondary.User)
 	}
 
 	return overridesPrimary, overridesSecondary, err
