@@ -85,7 +85,7 @@ func sortUsersPerRemainingAvailability(d time.Time, users []pagerduty.User) []pa
 	var rank = make([]int, len(users))
 	for i, user := range users {
 		for _, a := range user.Unavailable {
-			if a.After(d) {
+			if a.After(d) && (d.Weekday().String() != time.Saturday.String() || (d.Weekday().String() == time.Saturday.String() && a.Weekday().String() == time.Saturday.String())) {
 				rank[i] = rank[i] + 1
 			}
 		}
