@@ -106,6 +106,8 @@ func main() {
 
 	input := utils.ParseFramadateCSV(data)
 
+	unavailablitiesStats := input.UnavailablitiesStats()
+
 	sv := solver.New(input, users, newbies, []string(lastUsers))
 	primary, secondary, err := sv.Run()
 	if err != nil {
@@ -141,13 +143,13 @@ func main() {
 	log.Info().Msg("")
 
 	h := color.New(color.FgHiBlue).Add(color.Bold)
-	log.Info().Msgf("+%s+----+----+", strings.Repeat("-", 62))
-	log.Info().Msgf("| %s                                                        |  %s |  %s |", h.Sprint("Email"), h.Sprint("S"), h.Sprint("W"))
-	log.Info().Msgf("+%s+----+----+", strings.Repeat("-", 62))
+	log.Info().Msgf("+%s+----+----+----+----+", strings.Repeat("-", 62))
+	log.Info().Msgf("| %s                                                        |  %s |  %s |   %s | %s |", h.Sprint("Email"), h.Sprint("S"), h.Sprint("W"), h.Sprint("u"), h.Sprint("v"))
+	log.Info().Msgf("+%s+----+----+----+----+", strings.Repeat("-", 62))
 
 	for _, user := range input.Users {
-		log.Info().Msgf("| %s %s| %2d | %2d |", user.Email, strings.Repeat(" ", 60-len(user.Email)), sv.Stats[user.Email], sv.WeekendStats[user.Email])
+		log.Info().Msgf("| %s %s| %2d | %2d | %2d | %2d |", user.Email, strings.Repeat(" ", 60-len(user.Email)), sv.Stats[user.Email], sv.WeekendStats[user.Email], unavailablitiesStats.Weekdays[user.Email], unavailablitiesStats.Weekends[user.Email])
 	}
-	log.Info().Msgf("+%s+----+----+", strings.Repeat("-", 62))
+	log.Info().Msgf("+%s+----+----+----+----+", strings.Repeat("-", 62))
 	log.Info().Msg("")
 }
