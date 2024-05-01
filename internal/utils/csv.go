@@ -1,13 +1,14 @@
 package utils
 
 import (
-	"github.com/jtbonhomme/goshift/internal/pagerduty"
 	"time"
+
+	"github.com/jtbonhomme/goshift/internal/pagerduty"
 )
 
 var location *time.Location
 
-func init() {
+func init() { //nolint:gochecknoinits // todo
 	var err error
 	location, err = time.LoadLocation("Europe/Paris")
 	if err != nil {

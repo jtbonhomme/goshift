@@ -47,7 +47,6 @@ func New(input pagerduty.Input, users pagerduty.Users, newbies, lastUsers []stri
 		newbies:           newbies,
 		lastAssignedUsers: lastAssignedUsers,
 	}
-
 }
 
 func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, error) {
@@ -128,8 +127,7 @@ func (s *Solver) Run() (pagerduty.Overrides, pagerduty.Overrides, error) {
 		}
 
 		s.lastAssignedUsers = []pagerduty.AssignedUser{}
-		s.lastAssignedUsers = append(s.lastAssignedUsers, primary.User)
-		s.lastAssignedUsers = append(s.lastAssignedUsers, secondary.User)
+		s.lastAssignedUsers = append(s.lastAssignedUsers, primary.User, secondary.User)
 	}
 
 	return overridesPrimary, overridesSecondary, err

@@ -11,7 +11,7 @@ func Average(stats map[string]int) int {
 		cumul += val
 	}
 
-	return int(cumul / len(stats))
+	return cumul / len(stats)
 }
 
 func Max(stats map[string]int) int {

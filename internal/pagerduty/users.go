@@ -76,7 +76,7 @@ func (ui *UserIterator) Next() (User, int) {
 	return ui.Users[k], k
 }
 
-func (users Users) RetrieveAssignedUser(user User) (AssignedUser, error) {
+func (users Users) RetrieveAssignedUser(user User) (AssignedUser, error) { //nolint:gocritic // todo
 	for _, u := range users.Users {
 		if u.Email == user.Email {
 			return AssignedUser{

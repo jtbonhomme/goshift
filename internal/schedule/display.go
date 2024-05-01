@@ -1,7 +1,6 @@
 package schedule
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -79,10 +78,8 @@ func printFirstWeek(day *int, start time.Time, schedule pagerduty.Overrides) {
 			*day++
 			found = true
 			continue
-		} else {
-			if !found {
-				line += fmt.Sprint(daySeparator + monthStringLen + strings.Repeat(" ", nameLen))
-			}
+		} else if !found {
+			line += daySeparator + monthStringLen + strings.Repeat(" ", nameLen)
 		}
 
 		if found {
@@ -125,12 +122,12 @@ func printName(idx int, schedule pagerduty.Overrides) string {
 	return firstName
 }
 
-func printDay(day int, idx int, start time.Time) string {
+func printDay(day, idx int, start time.Time) string {
 	workdayColor := color.New(color.FgWhite).Add(color.Bold)
 	holidayColor := color.New(color.FgHiCyan).Add(color.Bold)
 	currentDayColor := color.New(color.FgHiRed).Add(color.Bold)
 
-	if day > 9 {
+	if day > 9 { //nolint:gomnd // obvious value
 		if day == start.Day() {
 			return currentDayColor.Sprintf(" %d%s", day, daySeparator)
 		} else if idx == 5 || idx == 6 {

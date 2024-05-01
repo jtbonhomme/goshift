@@ -2,7 +2,6 @@ package pagerduty
 
 import "time"
 
-// Unavalabilities .
 type Unavalabilities struct {
 	Weekdays map[string]int
 	Weekends map[string]int
@@ -24,7 +23,6 @@ func (input *Input) UnavailablitiesStats() *Unavalabilities {
 				unavailablitiesStats.Weekends[user.Email] = n + 1
 			}
 		}
-
 	}
 
 	return unavailablitiesStats

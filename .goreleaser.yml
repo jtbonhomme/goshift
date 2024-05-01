@@ -1,0 +1,20 @@
+---
+builds:
+    - binary: goshift
+      id: "goshift"
+      main: ./cmd/goshift
+      env:
+        - CGO_ENABLED=0
+      goos:
+        - linux
+        - darwin
+      goarch:
+        - amd64
+        - arm64
+snapshot:
+  name_template: "{{ .FullCommit }}-SNAPSHOT"
+release:
+  github:
+    owner: jtbonhomme
+    name: goshift
+

@@ -19,6 +19,12 @@ import (
 	"github.com/jtbonhomme/goshift/internal/utils"
 )
 
+const (
+	LineLength                 int         = 62
+	LineLengthMinusWhitespaces int         = 60
+	WriteFilePermissions       os.FileMode = 0600
+)
+
 type arrayFlags []string
 
 func (i *arrayFlags) String() string {
@@ -30,7 +36,7 @@ func (i *arrayFlags) Set(value string) error {
 	return nil
 }
 
-func main() {
+func main() { //nolint:funlen // todo
 	var err error
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
@@ -57,13 +63,13 @@ func main() {
 		panic(errors.New("framadate csv file is missing"))
 	}
 
-	usersJson, err := os.Open(usersPath)
+	usersJSON, err := os.Open(usersPath)
 	if err != nil {
 		panic(errors.New("unable to open users file " + usersPath + " : " + err.Error()))
 	}
 	log.Info().Msg("Successfully opened users.json")
-	defer usersJson.Close()
-	usersValue, err := io.ReadAll(usersJson)
+	defer usersJSON.Close()
+	usersValue, err := io.ReadAll(usersJSON)
 	if err != nil {
 		panic(errors.New("unable to read json file : " + err.Error()))
 	}
@@ -74,14 +80,14 @@ func main() {
 		panic(errors.New("unable to unmarshall users JSON value: " + err.Error()))
 	}
 
-	newbiesJson, err := os.Open(newbiesPath)
+	newbiesJSON, err := os.Open(newbiesPath)
 	if err != nil {
 		panic(errors.New("unable to open newbies file " + newbiesPath + " : " + err.Error()))
 	}
 
 	log.Info().Msg("Successfully opened newbies.json")
-	defer newbiesJson.Close()
-	newbiesValue, err := io.ReadAll(newbiesJson)
+	defer newbiesJSON.Close()
+	newbiesValue, err := io.ReadAll(newbiesJSON)
 	if err != nil {
 		panic(errors.New("unable to read json file : " + err.Error()))
 	}
@@ -121,7 +127,7 @@ func main() {
 		panic(err)
 	}
 
-	err = os.WriteFile("primary.json", p, 0644)
+	err = os.WriteFile("primary.json", p, WriteFilePermissions)
 	if err != nil {
 		panic(err)
 	}
@@ -133,7 +139,7 @@ func main() {
 		panic(err)
 	}
 
-	err = os.WriteFile("secondary.json", s, 0644)
+	err = os.WriteFile("secondary.json", s, WriteFilePermissions)
 	if err != nil {
 		panic(err)
 	}
@@ -143,13 +149,17 @@ func main() {
 	log.Info().Msg("")
 
 	h := color.New(color.FgHiBlue).Add(color.Bold)
-	log.Info().Msgf("+%s+----+----+----+----+", strings.Repeat("-", 62))
-	log.Info().Msgf("| %s                                                        |  %s |  %s |   %s | %s |", h.Sprint("Email"), h.Sprint("S"), h.Sprint("W"), h.Sprint("u"), h.Sprint("v"))
-	log.Info().Msgf("+%s+----+----+----+----+", strings.Repeat("-", 62))
+	log.Info().Msgf("+%s+----+----+----+----+", strings.Repeat("-", LineLength))
+	log.Info().Msgf("| %s                                                        |  %s |  %s |   %s | %s |",
+		h.Sprint("Email"), h.Sprint("S"), h.Sprint("W"), h.Sprint("u"), h.Sprint("v"))
+	log.Info().Msgf("+%s+----+----+----+----+", strings.Repeat("-", LineLength))
 
 	for _, user := range input.Users {
-		log.Info().Msgf("| %s %s| %2d | %2d | %2d | %2d |", user.Email, strings.Repeat(" ", 60-len(user.Email)), sv.Stats[user.Email], sv.WeekendStats[user.Email], unavailablitiesStats.Weekdays[user.Email], unavailablitiesStats.Weekends[user.Email])
+		log.Info().Msgf("| %s %s| %2d | %2d | %2d | %2d |",
+			user.Email, strings.Repeat(" ", LineLengthMinusWhitespaces-len(user.Email)),
+			sv.Stats[user.Email], sv.WeekendStats[user.Email], unavailablitiesStats.Weekdays[user.Email],
+			unavailablitiesStats.Weekends[user.Email])
 	}
-	log.Info().Msgf("+%s+----+----+----+----+", strings.Repeat("-", 62))
+	log.Info().Msgf("+%s+----+----+----+----+", strings.Repeat("-", LineLength))
 	log.Info().Msg("")
 }

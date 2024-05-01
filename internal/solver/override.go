@@ -10,7 +10,8 @@ import (
 	"github.com/jtbonhomme/goshift/internal/utils"
 )
 
-func (s *Solver) processOverride(label string, d time.Time, lastUsers []pagerduty.AssignedUser, ui *pagerduty.UserIterator, isSecondary, checkStats bool) pagerduty.Override {
+func (s *Solver) processOverride(label string, d time.Time, lastUsers []pagerduty.AssignedUser,
+	ui *pagerduty.UserIterator, isSecondary, checkStats bool) pagerduty.Override {
 	override := pagerduty.Override{
 		Start: d,
 		End:   d.Add(utils.OneDay),
@@ -34,7 +35,9 @@ func (s *Solver) processOverride(label string, d time.Time, lastUsers []pagerdut
 			return override
 		}
 
-		log.Debug().Msgf("\t%s [%s] considering %s: %d | %d shifts (min Shifts: %d - min Weekends: %d | avg Shifts: %d - avg Weekends: %d)", label, d.String(), user.Email, s.Stats[user.Email], s.WeekendStats[user.Email], utils.Min(s.Stats), utils.Min(s.WeekendStats), utils.Average(s.Stats), utils.Average(s.WeekendStats))
+		log.Debug().Msgf("\t%s [%s] considering %s: %d | %d shifts (min Shifts: %d - min Weekends: %d | avg Shifts: %d - avg Weekends: %d)",
+			label, d.String(), user.Email, s.Stats[user.Email], s.WeekendStats[user.Email], utils.Min(s.Stats),
+			utils.Min(s.WeekendStats), utils.Average(s.Stats), utils.Average(s.WeekendStats))
 
 		// if user is un available that day, move to the next user
 		if slices.Contains(user.Unavailable, d) {

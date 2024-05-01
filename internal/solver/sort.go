@@ -46,7 +46,7 @@ func sortUsersPerAvailability(users []pagerduty.User) []pagerduty.User {
 	// rank users
 	var rank = make([]int, len(users))
 	for i, user := range users {
-		rank[i] = int(TopAvailabilityRatio / (BottomAvailabilityRatio - len(user.Unavailable)))
+		rank[i] = TopAvailabilityRatio / (BottomAvailabilityRatio - len(user.Unavailable))
 	}
 
 	// sort per ranking
@@ -85,8 +85,10 @@ func sortUsersPerRemainingAvailability(d time.Time, users []pagerduty.User) []pa
 	var rank = make([]int, len(users))
 	for i, user := range users {
 		for _, a := range user.Unavailable {
-			if a.After(d) && (d.Weekday().String() != time.Saturday.String() || (d.Weekday().String() == time.Saturday.String() && a.Weekday().String() == time.Saturday.String())) {
-				rank[i] = rank[i] + 1
+			if a.After(d) &&
+				(d.Weekday().String() != time.Saturday.String() || (d.Weekday().String() == time.Saturday.String() &&
+					a.Weekday().String() == time.Saturday.String())) {
+				rank[i]++
 			}
 		}
 	}
@@ -126,7 +128,7 @@ func sortUsersPerAvailabilityAndStats(users []pagerduty.User, stats map[string]i
 	// rank users
 	var rank = make([]int, len(users))
 	for i, user := range users {
-		r := int(TopAvailabilityRatio/(BottomAvailabilityRatio-len(user.Unavailable))) - stats[user.Email]*StatsPenaltyFactor
+		r := TopAvailabilityRatio/(BottomAvailabilityRatio-len(user.Unavailable)) - stats[user.Email]*StatsPenaltyFactor
 		if r <= 0 {
 			r = 1
 		}
