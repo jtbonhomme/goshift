@@ -68,7 +68,7 @@ Usage of goshift:
 2. Download schedule as CSV from Framadate
 3. Download pagerduty schedule users from API: 
 ```sh
-curl -s -o ~/Documents/Contentsquare/pagerduty-users.json --request GET \
+curl -s -o ~/Documents/pagerduty-users.json --request GET \
   --url https://api.pagerduty.com/schedules/<SCHEDULE-ID>/users \
   --header 'Accept: application/json' \
   --header 'Authorization: Token token=<API-KEY>' \
@@ -148,6 +148,6 @@ This will create two files `primary.json` and `secondary.json`
 
 * [ ] Use Teams / Members PD api
 ```sh
-curl -s -o ~/Documents/Contentsquare/pagerduty-members.json --request GET  --url https://api.pagerduty.com/teams/<TEAM-ID>/members  --header 'Accept: application/json'  --header 'Authorization: Token token=<API-KEY>'  --header 'Content-Type: application/json'
+curl -s -o ~/Documents/pagerduty-members.json --request GET  --url https://api.pagerduty.com/teams/<TEAM-ID>/members  --header 'Accept: application/json'  --header 'Authorization: Token token=<API-KEY>'  --header 'Content-Type: application/json'
 ```
 * [ ] Manage geos of engineers to use local week-end definition
