@@ -41,8 +41,8 @@ func main() {
 
 	flag.BoolVar(&debug, "debug", false, "sets log level to debug")
 	flag.StringVar(&csvPath, "csv", "", "[mandatory] framadate csv file path")
-	flag.StringVar(&usersPath, "users", os.Getenv("HOME")+"/Documents/Contentsquare/pagerduty-users.json", "[optional] users json file path")
-	flag.StringVar(&newbiesPath, "newbies", os.Getenv("HOME")+"/Documents/Contentsquare/pagerduty-newbies.json", "[optional] newbies json file path")
+	flag.StringVar(&usersPath, "users", os.Getenv("HOME")+"/Documents/pagerduty-users.json", "[optional] users json file path")
+	flag.StringVar(&newbiesPath, "newbies", os.Getenv("HOME")+"/Documents/pagerduty-newbies.json", "[optional] newbies json file path")
 	flag.Var(&lastUsers, "last", "[optional] last users emails of previous schedule")
 
 	flag.Parse()
